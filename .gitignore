@@ -1,0 +1,32 @@
+# Byte-compiled / optimized / DLL files
+*.elc
+
+# Distribution / packaging
+.elpa/
+
+# Emacs backup files
+*~
+*#
+.#*
+
+# Auto-generated files
+auto-save-list
+tramp
+.\#*
+
+# Network security settings
+network-security.data
+
+# Flycheck
+flycheck_*.el
+
+# server auth directory
+server/
+
+# Eldev
+.eldev/
+
+# Others
+/spec.md
+/tasks.md
+/tests/QA.md
