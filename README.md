@@ -2,7 +2,7 @@
 
 Emacs integration for **Codex CLI**. It runs the Codex terminal UI inside Emacs per project and gives you a few high‑leverage helpers for sending prompts, regions, and files. No MCP. No diagnostics. No patch reviewer. Small surface, stable defaults.
 
-![Screenshot](screenshot.png)
+![Screenshot](./screenshot.png)
 
 **Status:** v0.1 (minimal feature set)
 
