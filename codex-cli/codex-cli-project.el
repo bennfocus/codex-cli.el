@@ -1,15 +1,12 @@
 ;;; codex-cli-project.el --- Project root discovery for codex-cli -*- lexical-binding: t; -*-
 ;; Author: Benn <bennmsg@gmail.com>
 ;; Maintainer: Benn <bennmsg@gmail.com>
-;; Version: 0.1.0
+;; Version: 0.1.1
 ;; Package-Requires: ((emacs "28.1"))
-;; Keywords: tools, convenience, codex, codex-cli
+;; Keywords: tools convenience codex codex-cli
 ;; URL: https://github.com/bennfocus/codex-cli.el
 
-;; This file is not part of GNU Emacs.
-
 ;;; Commentary:
-
 ;; Project root discovery via `project.el` and relative path helpers for
 ;; codex-cli.
 
@@ -37,5 +34,4 @@ If PATH is not under the project root, return the absolute path."
       path)))
 
 (provide 'codex-cli-project)
-
 ;;; codex-cli-project.el ends here

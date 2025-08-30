@@ -1,15 +1,12 @@
 ;;; codex-cli-utils.el --- Utility functions for codex-cli -*- lexical-binding: t; -*-
 ;; Author: Benn <bennmsg@gmail.com>
 ;; Maintainer: Benn <bennmsg@gmail.com>
-;; Version: 0.1.0
+;; Version: 0.1.1
 ;; Package-Requires: ((emacs "28.1"))
-;; Keywords: tools, convenience, codex, codex-cli
+;; Keywords: tools convenience codex codex-cli
 ;; URL: https://github.com/bennfocus/codex-cli.el
 
-;; This file is not part of GNU Emacs.
-
 ;;; Commentary:
-
 ;; Fence formatting, language guessing, echo-area progress, and ring for last
 ;; injected block for codex-cli.
 
@@ -115,5 +112,4 @@ and TEXT is the injected content."
         (insert log-entry)))))
 
 (provide 'codex-cli-utils)
-
 ;;; codex-cli-utils.el ends here

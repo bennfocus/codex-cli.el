@@ -1,15 +1,12 @@
 ;;; codex-cli-term.el --- Terminal abstraction for codex-cli -*- lexical-binding: t; -*-
 ;; Author: Benn <bennmsg@gmail.com>
 ;; Maintainer: Benn <bennmsg@gmail.com>
-;; Version: 0.1.0
+;; Version: 0.1.1
 ;; Package-Requires: ((emacs "28.1"))
-;; Keywords: tools, convenience, codex, codex-cli
+;; Keywords: tools convenience codex codex-cli
 ;; URL: https://github.com/bennfocus/codex-cli.el
 
-;; This file is not part of GNU Emacs.
-
 ;;; Commentary:
-
 ;; Terminal abstraction for codex-cli. Start vterm or term, send strings with
 ;; proper escapes, chunking, and liveness checks.
 
@@ -133,5 +130,4 @@ Appends final newline once after all chunks are sent."
       (message "Sending complete."))))
 
 (provide 'codex-cli-term)
-
 ;;; codex-cli-term.el ends here

@@ -1,15 +1,12 @@
 ;;; codex-cli.el --- Codex CLI integration  -*- lexical-binding: t; -*-
 ;; Author: Benn <bennmsg@gmail.com>
 ;; Maintainer: Benn <bennmsg@gmail.com>
-;; Version: 0.1.0
+;; Version: 0.1.1
 ;; Package-Requires: ((emacs "28.1"))
-;; Keywords: tools, convenience, codex, codex-cli
+;; Keywords: tools convenience codex codex-cli
 ;; URL: https://github.com/bennfocus/codex-cli.el
 
-;; This file is not part of GNU Emacs.
-
 ;;; Commentary:
-
 ;; Run Codex CLI in an Emacs terminal buffer per project and provide minimal
 ;; helpers to send context: region, file, arbitrary text. Predictable window
 ;; management with a small surface area.
@@ -265,5 +262,4 @@ If the buffer exists, switch to it. Otherwise, create it first."
         (codex-cli--log-and-send buffer fenced-block "file")))))
 
 (provide 'codex-cli)
-
 ;;; codex-cli.el ends here
