@@ -23,8 +23,10 @@
   "Non-nil if we've already warned about vterm fallback to term.")
 
 (defun codex-cli--vterm-available-p ()
-  "Return non-nil if vterm is available."
-  (featurep 'vterm))
+  "Return non-nil if vterm is available to load.
+Tries to require it lazily; returns nil if not installed."
+  (or (featurep 'vterm)
+      (require 'vterm nil t)))
 
 (defun codex-cli--start-vterm-process (buffer project-root command args)
   "Start a vterm process in BUFFER at PROJECT-ROOT running COMMAND with ARGS."
@@ -39,6 +41,8 @@
   "Start a term process in BUFFER at PROJECT-ROOT running COMMAND with ARGS."
   (with-current-buffer buffer
     (let ((default-directory project-root))
+      ;; Ensure term is loaded before invoking term-mode functions
+      (require 'term)
       (term-mode)
       (term-exec buffer (buffer-name buffer) command nil args))))
 
@@ -63,7 +67,7 @@ BACKEND should be \\='vterm or \\='term."
    ((eq backend 'vterm)
     ;; vterm requested but not available, fallback to term
     (unless codex-cli--vterm-fallback-warned
-      (message "vterm not available, falling back to term")
+      (message "vterm not available; using built-in term instead")
       (setq codex-cli--vterm-fallback-warned t))
     (codex-cli--start-term-process buffer project-root command args))
    (t
@@ -88,14 +92,13 @@ BACKEND should be \\='vterm or \\='term."
   (when (and (buffer-live-p buffer) (codex-cli--alive-p buffer))
     (with-current-buffer buffer
       (cond
-       ((and (boundp 'vterm-mode) vterm-mode)
+       ((eq major-mode 'vterm-mode)
         (require 'vterm)
         (vterm-send-string text))
-       ((and (boundp 'term-mode) 
-             (or (eq major-mode 'term-mode) (eq major-mode 'ansi-term-mode)))
+       ((or (eq major-mode 'term-mode) (eq major-mode 'ansi-term-mode))
         (term-send-raw-string text))
        (t
-        (error "Buffer is not in vterm or term mode"))))))
+        (error "Buffer is not in vterm or term mode: %s" major-mode))))))
 
 (defun codex-cli--chunked-send (buffer text max-bytes-per-send)
   "Send TEXT to BUFFER in chunks of MAX-BYTES-PER-SEND with delays.

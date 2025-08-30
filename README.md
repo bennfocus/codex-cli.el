@@ -138,7 +138,7 @@ Note: If this package isn’t on MELPA yet, use Option B.
 
 **Content formatting**
 
-The package wraps content with a header and a fenced code block:
+By default, the package wraps content with a header and a fenced code block:
 
 ````
 # File: relative/path/to/file.ext
@@ -148,6 +148,24 @@ The package wraps content with a header and a fenced code block:
 ````
 
 The language tag is guessed from the current major mode or file extension. If unknown, it is omitted.
+
+Alternatively, you can send file references instead of full content:
+
+```
+@relative/path/to/file.ext#L17-26
+```
+
+Enable this style and tweak formatting via:
+
+```elisp
+(setq codex-cli-send-style 'reference)
+(setq codex-cli-reference-prefix "")   ;; e.g., "i " if your CLI expects it
+(setq codex-cli-reference-format-single "@%s#L%d")
+(setq codex-cli-reference-format-range  "@%s#L%d-%d")
+(setq codex-cli-reference-file-format   "@%s")
+```
+
+When using `reference` style, `codex-cli-send-region` emits a file+line token if the buffer visits a file; otherwise it falls back to fenced content. `codex-cli-send-file` emits a whole‑file token like `@path`.
 
 ---
 
