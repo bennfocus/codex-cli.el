@@ -1,6 +1,8 @@
 # codex-cli.el
 
-Minimal Emacs integration for **Codex CLI**. It runs the Codex terminal UI inside Emacs per project and gives you a few high‑leverage helpers for sending prompts, regions, and files. No MCP. No diagnostics. No patch reviewer. Small surface, stable defaults.
+Emacs integration for **Codex CLI**. It runs the Codex terminal UI inside Emacs per project and gives you a few high‑leverage helpers for sending prompts, regions, and files. No MCP. No diagnostics. No patch reviewer. Small surface, stable defaults.
+
+![Screenshot](screenshot.png)
 
 **Status:** v0.1 (minimal feature set)
 
@@ -29,32 +31,62 @@ Non‑goals for v0.1: MCP tools, Flycheck/Flymake bridges, ediff workflows, comp
 
 ## Install
 
-### Option A: Doom/straight (local working tree)
+### Option A: MELPA (use-package)
+
+Ensure MELPA is configured, then:
 
 ```elisp
 (use-package codex-cli
-  :load-path "~/code/claude-code-ide/codex-cli"   ;; adjust path to your repo
-  :commands (codex-cli-start codex-cli-toggle codex-cli-send-region codex-cli-send-file)
+  :ensure t
+  :bind (("C-c x s" . codex-cli-start)
+         ("C-c x t" . codex-cli-toggle)
+         ("C-c x r" . codex-cli-restart)
+         ("C-c x p" . codex-cli-send-prompt)
+         ("C-c x e" . codex-cli-send-region)
+         ("C-c x f" . codex-cli-send-file)
+         ("C-c x b" . codex-cli-copy-last-block))
   :init
   (setq codex-cli-executable "codex"
         codex-cli-terminal-backend 'vterm
         codex-cli-width 90))
 ```
 
-### Option B: Vanilla Emacs
+Note: If this package isn’t on MELPA yet, use Option B.
+
+### Option B: From GitHub via :vc (Emacs 29+)
 
 ```elisp
-(add-to-list 'load-path "~/code/claude-code-ide/codex-cli") ; adjust path
-(require 'codex-cli)
+(use-package codex-cli
+  :vc (:fetcher github :repo "bennfocus/codex-cli.el")
+  :bind (("C-c x s" . codex-cli-start)
+         ("C-c x t" . codex-cli-toggle)
+         ("C-c x r" . codex-cli-restart)
+         ("C-c x p" . codex-cli-send-prompt)
+         ("C-c x e" . codex-cli-send-region)
+         ("C-c x f" . codex-cli-send-file)
+         ("C-c x b" . codex-cli-copy-last-block))
+  :init
+  (setq codex-cli-executable "codex"
+        codex-cli-terminal-backend 'vterm
+        codex-cli-width 90))
 ```
 
-Optional keybindings:
+### Option C: Local working tree (no package manager)
 
 ```elisp
-(global-set-key (kbd "C-c x s") #'codex-cli-start)
-(global-set-key (kbd "C-c x t") #'codex-cli-toggle)
-(global-set-key (kbd "C-c x r") #'codex-cli-restart)
-(global-set-key (kbd "C-c x p") #'codex-cli-send-prompt)
+(use-package codex-cli
+  :load-path "/path/to/codex-cli.el/codex-cli"   ;; adjust to your checkout
+  :bind (("C-c x s" . codex-cli-start)
+         ("C-c x t" . codex-cli-toggle)
+         ("C-c x r" . codex-cli-restart)
+         ("C-c x p" . codex-cli-send-prompt)
+         ("C-c x e" . codex-cli-send-region)
+         ("C-c x f" . codex-cli-send-file)
+         ("C-c x b" . codex-cli-copy-last-block))
+  :init
+  (setq codex-cli-executable "codex"
+        codex-cli-terminal-backend 'vterm
+        codex-cli-width 90))
 ```
 
 ---
@@ -66,7 +98,7 @@ Optional keybindings:
    which codex && codex --version
    ```
 2. Open a file inside your project in Emacs.
-3. `M-x codex-cli-start` to open a `*codex-cli:PROJECT*` buffer on the right.
+3. `M-x codex-cli-start` (or `C-c x s`) to open a `*codex-cli:PROJECT*` buffer on the right.
 4. Try:
    - `M-x codex-cli-send-prompt` to paste a message into the terminal
    - Select a region then `M-x codex-cli-send-region`
@@ -91,7 +123,7 @@ Optional keybindings:
 
 ```elisp
 (defgroup codex-cli nil
-  "Run Codex CLI inside Emacs with minimal helpers."
+  "Run Codex CLI inside Emacs with helpers."
   :group 'tools :prefix "codex-cli-")
 
 (defcustom codex-cli-executable "codex" "Path to Codex CLI.")
@@ -129,7 +161,7 @@ Hard reload when you changed many files:
 
 ```elisp
 (unload-feature 'codex-cli t)
-(load (expand-file-name "~/code/claude-code-ide/codex-cli/codex-cli.el") nil 'nomessage)
+(load (expand-file-name "/path/to/codex-cli.el/codex-cli/codex-cli.el") nil 'nomessage)
 ```
 
 If Emacs reports dependencies are still loaded, unload in reverse order:
@@ -137,14 +169,14 @@ If Emacs reports dependencies are still loaded, unload in reverse order:
 ```elisp
 (mapc (lambda (f) (ignore-errors (unload-feature f t)))
       '(codex-cli-term codex-cli-utils codex-cli-project codex-cli))
-(load (expand-file-name "~/code/claude-code-ide/codex-cli/codex-cli.el") nil 'nomessage)
+(load (expand-file-name "/path/to/codex-cli.el/codex-cli/codex-cli.el") nil 'nomessage)
 ```
 
 Byte‑compile to catch warnings:
 
 ```bash
-emacs -Q --batch -L ~/code/claude-code-ide/codex-cli \
-  -f batch-byte-compile ~/code/claude-code-ide/codex-cli/*.el
+emacs -Q --batch -L /path/to/codex-cli.el/codex-cli \
+  -f batch-byte-compile /path/to/codex-cli.el/codex-cli/*.el
 ```
 
 ---
@@ -155,9 +187,9 @@ If you added ERT tests as suggested in `tasks.md`:
 
 ```bash
 emacs -Q --batch \
-  -L ~/code/claude-code-ide/codex-cli \
-  -l ~/code/claude-code-ide/codex-cli/codex-cli.el \
-  -l ~/code/claude-code-ide/tests/codex-cli-test.el \
+  -L /path/to/codex-cli.el/codex-cli \
+  -l /path/to/codex-cli.el/codex-cli/codex-cli.el \
+  -l /path/to/codex-cli.el/tests/codex-cli-test.el \
   -f ert-run-tests-batch-and-exit
 ```
 
@@ -184,11 +216,10 @@ For the full design, see `spec.md`.
 
 ## License
 
-MIT unless your project requires a different license. Update `LICENSE` accordingly.
+MIT
 
 ---
 
 ## Acknowledgments
 
 Inspired by the excellent editor‑agent integration patterns in the Emacs community. Built as a clean, minimal alternative tailored for Codex CLI.
-

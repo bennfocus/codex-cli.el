@@ -1,4 +1,4 @@
-;;; codex-cli.el --- Minimal Codex CLI integration  -*- lexical-binding: t; -*-
+;;; codex-cli.el --- Codex CLI integration  -*- lexical-binding: t; -*-
 ;; Author: Benn <bennmsg@gmail.com>
 ;; Maintainer: Benn <bennmsg@gmail.com>
 ;; Version: 0.1.0
