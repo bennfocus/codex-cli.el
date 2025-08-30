@@ -1,11 +1,10 @@
 ;;; codex-cli-utils.el --- Utility functions for codex-cli -*- lexical-binding: t; -*-
-
-;; Copyright (C) 2025
-
-;; Author: codex-cli.el contributors
-;; Keywords: tools, processes
+;; Author: Benn <bennmsg@gmail.com>
+;; Maintainer: Benn <bennmsg@gmail.com>
 ;; Version: 0.1.0
 ;; Package-Requires: ((emacs "28.1"))
+;; Keywords: tools, convenience, codex, codex-cli
+;; URL: https://github.com/bennfocus/codex-cli.el
 
 ;; This file is not part of GNU Emacs.
 
