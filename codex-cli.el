@@ -5,6 +5,7 @@
 ;; Package-Requires: ((emacs "28.1"))
 ;; Keywords: tools convenience codex codex-cli
 ;; URL: https://github.com/bennfocus/codex-cli.el
+;; SPDX-License-Identifier: MIT
 
 ;;; Commentary:
 ;; Run Codex CLI in an Emacs terminal buffer per project and provide minimal
@@ -95,7 +96,8 @@ For example, set to \"i \" to send `i @file#L10-20'."
 
 (defcustom codex-cli-reference-format-range "@%s#L%d-%d"
   "Format string for a line-range file reference.
-`%s' is the relative path, first `%d' is the start line, second `%d' is the end line."
+The `%s' is the relative path; the first `%d' is the start line and
+the second `%d' is the end line."
   :type 'string
   :group 'codex-cli)
 
@@ -143,7 +145,7 @@ If the buffer exists, switch to it. Otherwise, create it first."
 
 (defun codex-cli--setup-side-window (buffer)
   "Display BUFFER in a side window according to configuration."
-  (display-buffer-in-side-window 
+  (display-buffer-in-side-window
    buffer
    `((side . ,codex-cli-side)
      (window-width . ,codex-cli-width))))
@@ -191,8 +193,8 @@ If the buffer exists, switch to it. Otherwise, create it first."
          (was-running (codex-cli--alive-p buffer)))
     ;; Start process if not already running
     (unless was-running
-      (codex-cli--start-terminal-process 
-       buffer 
+      (codex-cli--start-terminal-process
+       buffer
        project-root
        codex-cli-executable
        codex-cli-extra-args
@@ -242,7 +244,7 @@ If the buffer exists, switch to it. Otherwise, create it first."
   (let ((buffer (codex-cli--get-or-create-buffer)))
     (unless (codex-cli--alive-p buffer)
       (error "Codex CLI process not running. Use `codex-cli-start' first"))
-    
+
     (let ((prompt (read-string "Prompt: " nil nil nil t)))
       (when (and prompt (> (length prompt) 0))
         (codex-cli--log-and-send buffer prompt "prompt")))))
@@ -255,7 +257,7 @@ If the buffer exists, switch to it. Otherwise, create it first."
         (last-block (codex-cli--get-last-block)))
     (unless (codex-cli--alive-p buffer)
       (error "Codex CLI process not running. Use `codex-cli-start' first"))
-    
+
     (if (and last-block (> (length last-block) 0))
         (progn
           (codex-cli--log-injection (codex-cli--project-name) "resend" last-block)
@@ -273,10 +275,10 @@ Behavior depends on `codex-cli-send-style':
   (let ((buffer (codex-cli--get-or-create-buffer)))
     (unless (codex-cli--alive-p buffer)
       (error "Codex CLI process not running. Use `codex-cli-start' first"))
-    
+
     (let* ((start (if (region-active-p) (region-beginning) (point-min)))
            (end (if (region-active-p) (region-end) (point-max))))
-      
+
       (when (and (not (region-active-p))
                  (not (y-or-n-p "No active region. Send whole buffer? ")))
         (user-error "Cancelled"))
@@ -314,17 +316,17 @@ When `reference', send an `@path' token instead of content."
   (let ((buffer (codex-cli--get-or-create-buffer)))
     (unless (codex-cli--alive-p buffer)
       (error "Codex CLI process not running. Use `codex-cli-start' first"))
-    
+
     (let* ((project-root (codex-cli-project-root))
            (file-path (read-file-name "Send file: " project-root nil t)))
-      
+
       ;; Check if file is inside project root
       (unless (string-prefix-p project-root (expand-file-name file-path))
         (error "File must be inside project root: %s" project-root))
-      
+
       (unless (file-readable-p file-path)
         (error "File not readable: %s" file-path))
-      
+
       (let* ((relpath (codex-cli-relpath file-path)))
         (cond
          ((eq codex-cli-send-style 'reference)

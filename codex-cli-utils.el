@@ -1,8 +1,7 @@
 ;;; codex-cli-utils.el --- Utility functions for codex-cli -*- lexical-binding: t; -*-
 ;; Author: Benn <bennmsg@gmail.com>
 ;; Maintainer: Benn <bennmsg@gmail.com>
-;; Version: 0.1.1
-;; Package-Requires: ((emacs "28.1"))
+;; SPDX-License-Identifier: MIT
 ;; Keywords: tools convenience codex codex-cli
 ;; URL: https://github.com/bennfocus/codex-cli.el
 
@@ -105,7 +104,7 @@ PROJECT-NAME is the project name, OPERATION is the type of operation,
 and TEXT is the injected content."
   (when (bound-and-true-p codex-cli-log-injections)
     (let* ((log-buffer-name (codex-cli--log-buffer-name project-name))
-           (timestamp (format-time-string "%Y-%m-%d %H:%M:%S"))
+           (timestamp (format-time-string "%F %T"))
            (log-entry (format "[%s] %s:\n%s\n\n" timestamp operation text)))
       (with-current-buffer (get-buffer-create log-buffer-name)
         (goto-char (point-max))

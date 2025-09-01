@@ -75,7 +75,7 @@ Note: If this package isn’t on MELPA yet, use Option B.
 
 ```elisp
 (use-package codex-cli
-  :load-path "/path/to/codex-cli.el/codex-cli"   ;; adjust to your checkout
+  :load-path "/path/to/codex-cli.el"   ;; adjust to your checkout
   :bind (("C-c x s" . codex-cli-start)
          ("C-c x t" . codex-cli-toggle)
          ("C-c x r" . codex-cli-restart)
@@ -179,7 +179,7 @@ Hard reload when you changed many files:
 
 ```elisp
 (unload-feature 'codex-cli t)
-(load (expand-file-name "/path/to/codex-cli.el/codex-cli/codex-cli.el") nil 'nomessage)
+(load (expand-file-name "/path/to/codex-cli.el/codex-cli.el") nil 'nomessage)
 ```
 
 If Emacs reports dependencies are still loaded, unload in reverse order:
@@ -187,14 +187,14 @@ If Emacs reports dependencies are still loaded, unload in reverse order:
 ```elisp
 (mapc (lambda (f) (ignore-errors (unload-feature f t)))
       '(codex-cli-term codex-cli-utils codex-cli-project codex-cli))
-(load (expand-file-name "/path/to/codex-cli.el/codex-cli/codex-cli.el") nil 'nomessage)
+(load (expand-file-name "/path/to/codex-cli.el/codex-cli.el") nil 'nomessage)
 ```
 
 Byte‑compile to catch warnings:
 
 ```bash
-emacs -Q --batch -L /path/to/codex-cli.el/codex-cli \
-  -f batch-byte-compile /path/to/codex-cli.el/codex-cli/*.el
+emacs -Q --batch -L /path/to/codex-cli.el \
+  -f batch-byte-compile /path/to/codex-cli.el/*.el
 ```
 
 ---
@@ -205,8 +205,8 @@ If you added ERT tests as suggested in `tasks.md`:
 
 ```bash
 emacs -Q --batch \
-  -L /path/to/codex-cli.el/codex-cli \
-  -l /path/to/codex-cli.el/codex-cli/codex-cli.el \
+  -L /path/to/codex-cli.el \
+  -l /path/to/codex-cli.el/codex-cli.el \
   -l /path/to/codex-cli.el/tests/codex-cli-test.el \
   -f ert-run-tests-batch-and-exit
 ```

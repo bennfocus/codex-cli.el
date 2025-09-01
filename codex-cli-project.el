@@ -1,8 +1,7 @@
 ;;; codex-cli-project.el --- Project root discovery for codex-cli -*- lexical-binding: t; -*-
 ;; Author: Benn <bennmsg@gmail.com>
 ;; Maintainer: Benn <bennmsg@gmail.com>
-;; Version: 0.1.1
-;; Package-Requires: ((emacs "28.1"))
+;; SPDX-License-Identifier: MIT
 ;; Keywords: tools convenience codex codex-cli
 ;; URL: https://github.com/bennfocus/codex-cli.el
 

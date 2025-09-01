@@ -1,8 +1,7 @@
 ;;; codex-cli-term.el --- Terminal abstraction for codex-cli -*- lexical-binding: t; -*-
 ;; Author: Benn <bennmsg@gmail.com>
 ;; Maintainer: Benn <bennmsg@gmail.com>
-;; Version: 0.1.1
-;; Package-Requires: ((emacs "28.1"))
+;; SPDX-License-Identifier: MIT
 ;; Keywords: tools convenience codex codex-cli
 ;; URL: https://github.com/bennfocus/codex-cli.el
 
@@ -34,7 +33,7 @@ Tries to require it lazily; returns nil if not installed."
   (with-current-buffer buffer
     (let ((default-directory project-root))
       (vterm-mode)
-      (vterm-send-string (concat command " " (mapconcat 'shell-quote-argument args " ")))
+      (vterm-send-string (concat command " " (mapconcat #'shell-quote-argument args " ")))
       (vterm-send-return))))
 
 (defun codex-cli--start-term-process (buffer project-root command args)
@@ -55,12 +54,12 @@ Tries to require it lazily; returns nil if not installed."
 (defun codex-cli--start-terminal-process (buffer project-root command args backend)
   "Start terminal process in BUFFER at PROJECT-ROOT.
 COMMAND is the executable, ARGS is a list of arguments.
-BACKEND should be \\='vterm or \\='term."
+BACKEND should be \='vterm or \='term."
   ;; Check if executable is available
   (unless (codex-cli--executable-available-p command)
-    (error "Codex CLI executable not found: %s\nPATH: %s\nSet `codex-cli-executable' to the correct path" 
+    (error "Codex CLI executable not found: %s\nPATH: %s\nSet `codex-cli-executable' to the correct path"
            command (getenv "PATH")))
-  
+
   (cond
    ((and (eq backend 'vterm) (codex-cli--vterm-available-p))
     (codex-cli--start-vterm-process buffer project-root command args))
@@ -92,10 +91,10 @@ BACKEND should be \\='vterm or \\='term."
   (when (and (buffer-live-p buffer) (codex-cli--alive-p buffer))
     (with-current-buffer buffer
       (cond
-       ((eq major-mode 'vterm-mode)
+       ((derived-mode-p 'vterm-mode)
         (require 'vterm)
         (vterm-send-string text))
-       ((or (eq major-mode 'term-mode) (eq major-mode 'ansi-term-mode))
+       ((derived-mode-p 'term-mode)
         (term-send-raw-string text))
        (t
         (error "Buffer is not in vterm or term mode: %s" major-mode))))))
@@ -107,27 +106,27 @@ Appends final newline once after all chunks are sent."
          (start 0)
          (chunk-num 1)
          (total-chunks (ceiling (/ (float text-length) max-bytes-per-send))))
-    
+
     (while (< start text-length)
       (let* ((end (min (+ start max-bytes-per-send) text-length))
              (chunk (substring text start end)))
-        
+
         ;; Show progress for multiple chunks
         (when (> total-chunks 1)
           (message "Sending chunk [%d/%d]..." chunk-num total-chunks))
-        
+
         (codex-cli--send-string buffer chunk)
-        
+
         ;; Sleep between chunks (except for the last one)
         (when (< end text-length)
           (sleep-for 0.01))
-        
+
         (setq start end
               chunk-num (1+ chunk-num))))
-    
+
     ;; Send final newline
     (codex-cli--send-string buffer "\n")
-    
+
     ;; Clear progress message
     (when (> total-chunks 1)
       (message "Sending complete."))))
