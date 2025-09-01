@@ -12,6 +12,7 @@ Emacs integration for **Codex CLI**. It runs the Codex terminal UI inside Emacs 
 
 - Launch Codex CLI in a project‑scoped terminal buffer
 - Side window on the right with fixed width
+- Optional focus of the Codex window when shown
 - Send prompt from minibuffer, active region, or any file under the project
 - Smart chunking for large sends with progress messages
 - Optional per‑session preamble injected once
@@ -134,6 +135,7 @@ Note: If this package isn’t on MELPA yet, use Option B.
 (defcustom codex-cli-max-bytes-per-send 8000 "Chunk size for large sends.")
 (defcustom codex-cli-session-preamble nil "Optional text to inject once after start.")
 (defcustom codex-cli-log-injections t "Mirror injected blocks into a log buffer.")
+(defcustom codex-cli-focus-on-open t "Select the Codex side window after displaying it.")
 ```
 
 **Content formatting**
@@ -217,6 +219,7 @@ emacs -Q --batch \
 
 - **Codex not found** set `(setq codex-cli-executable "/full/path/to/codex")` and verify `(executable-find codex-cli-executable)`
 - **Window size** tweak `(setq codex-cli-width 100)` and restart the session
+- **Focus behavior** enable `(setq codex-cli-focus-on-open t)` to select the Codex window when it opens
 - **Unicode or paste issues** install `vterm` or set `(setq codex-cli-terminal-backend 'vterm)`
 - **Wrong project root** open a file inside the repo or set `default-directory` before starting
 - **Preamble runs twice** increase the post‑spawn idle delay in your code a little

@@ -74,6 +74,15 @@
   :type 'boolean
   :group 'codex-cli)
 
+;; Window focus behavior
+(defcustom codex-cli-focus-on-open t
+  "When non-nil, select the Codex side window after displaying it.
+Affects `codex-cli-start' and send commands like
+`codex-cli-send-prompt', `codex-cli-send-region', `codex-cli-send-file',
+and `codex-cli-copy-last-block'."
+  :type 'boolean
+  :group 'codex-cli)
+
 ;; Sending style and reference formatting
 (defcustom codex-cli-send-style 'fenced
   "How to send region/file content to Codex CLI.
@@ -150,6 +159,16 @@ If the buffer exists, switch to it. Otherwise, create it first."
    `((side . ,codex-cli-side)
      (window-width . ,codex-cli-width))))
 
+(defun codex-cli--show-and-maybe-focus (buffer)
+  "Ensure BUFFER is shown in a side window and maybe focus it.
+Returns the window displaying BUFFER. When
+`codex-cli-focus-on-open' is non-nil, selects that window."
+  (let ((win (or (get-buffer-window buffer)
+                 (codex-cli--setup-side-window buffer))))
+    (when (and codex-cli-focus-on-open (window-live-p win))
+      (select-window win))
+    win))
+
 (defun codex-cli--side-window-visible-p ()
   "Return t if a codex-cli side window is currently visible."
   (let ((buffer (get-buffer (codex-cli--buffer-name))))
@@ -166,7 +185,7 @@ If the buffer exists, switch to it. Otherwise, create it first."
           (when window
             (delete-window window)))
       ;; Show the window
-      (codex-cli--setup-side-window buffer))))
+      (codex-cli--show-and-maybe-focus buffer))))
 
 (defvar codex-cli--preamble-timer nil
   "Timer for preamble injection after process start.")
@@ -205,8 +224,8 @@ If the buffer exists, switch to it. Otherwise, create it first."
           (cancel-timer codex-cli--preamble-timer))
         (setq codex-cli--preamble-timer
               (run-with-timer 1.0 nil #'codex-cli--inject-preamble buffer))))
-    ;; Show in side window
-    (codex-cli--setup-side-window buffer)))
+    ;; Show in side window and maybe focus
+    (codex-cli--show-and-maybe-focus buffer)))
 
 ;; Update restart to use the new start logic
 ;;;###autoload
@@ -247,6 +266,8 @@ If the buffer exists, switch to it. Otherwise, create it first."
 
     (let ((prompt (read-string "Prompt: " nil nil nil t)))
       (when (and prompt (> (length prompt) 0))
+        ;; Focus after capturing input to avoid minibuffer flicker
+        (codex-cli--show-and-maybe-focus buffer)
         (codex-cli--log-and-send buffer prompt "prompt")))))
 
 ;;;###autoload
@@ -257,6 +278,9 @@ If the buffer exists, switch to it. Otherwise, create it first."
         (last-block (codex-cli--get-last-block)))
     (unless (codex-cli--alive-p buffer)
       (error "Codex CLI process not running. Use `codex-cli-start' first"))
+
+    ;; Ensure the window is visible and focused per user preference
+    (codex-cli--show-and-maybe-focus buffer)
 
     (if (and last-block (> (length last-block) 0))
         (progn
@@ -290,6 +314,7 @@ Behavior depends on `codex-cli-send-style':
             (let* ((content (buffer-substring-no-properties start end))
                    (language (codex-cli--detect-language))
                    (fenced (codex-cli--format-fenced-block content language nil)))
+              (codex-cli--show-and-maybe-focus buffer)
               (codex-cli--log-and-send buffer fenced "region"))
           (let* ((relpath (codex-cli-relpath buffer-file-name))
                  (start-line (save-excursion (goto-char start) (line-number-at-pos)))
@@ -297,6 +322,7 @@ Behavior depends on `codex-cli-send-style':
                              (goto-char (if (> end (point-min)) (1- end) end))
                              (line-number-at-pos)))
                  (ref (codex-cli--format-reference-for-region relpath start-line end-line)))
+            (codex-cli--show-and-maybe-focus buffer)
             (codex-cli--log-and-send buffer ref "region-ref"))))
        (t
         ;; fenced (default)
@@ -305,6 +331,7 @@ Behavior depends on `codex-cli-send-style':
                (filepath (when buffer-file-name
                            (codex-cli-relpath buffer-file-name)))
                (fenced-block (codex-cli--format-fenced-block content language filepath)))
+          (codex-cli--show-and-maybe-focus buffer)
           (codex-cli--log-and-send buffer fenced-block "region")))))))
 
 ;;;###autoload
@@ -332,6 +359,7 @@ When `reference', send an `@path' token instead of content."
          ((eq codex-cli-send-style 'reference)
           (let ((ref (codex-cli--format-reference-for-file relpath)))
             (message "Sending reference %s" ref)
+            (codex-cli--show-and-maybe-focus buffer)
             (codex-cli--log-and-send buffer ref "file-ref")))
          (t
           (let* ((content (with-temp-buffer
@@ -341,6 +369,7 @@ When `reference', send an `@path' token instead of content."
                  (language (codex-cli--detect-language-from-extension ext))
                  (fenced (codex-cli--format-fenced-block content language relpath)))
             (message "Sending %s..." relpath)
+            (codex-cli--show-and-maybe-focus buffer)
             (codex-cli--log-and-send buffer fenced "file"))))))))
 
 (provide 'codex-cli)
