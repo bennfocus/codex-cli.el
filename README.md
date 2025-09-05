@@ -39,13 +39,14 @@ Ensure MELPA is configured, then:
 ```elisp
 (use-package codex-cli
   :ensure t
-  :bind (("C-c x s" . codex-cli-start)
-         ("C-c x t" . codex-cli-toggle)
-         ("C-c x r" . codex-cli-restart)
-         ("C-c x p" . codex-cli-send-prompt)
-         ("C-c x e" . codex-cli-send-region)
-         ("C-c x f" . codex-cli-send-file)
-         ("C-c x b" . codex-cli-copy-last-block))
+  :bind (("C-c c s" . codex-cli-start)
+         ("C-c c c" . codex-cli-toggle)
+         ("C-c c q" . codex-cli-stop)
+         ;; ("C-c c Q" . codex-cli-restart)
+         ("C-c c p" . codex-cli-send-prompt)
+         ("C-c c r" . codex-cli-send-region)
+         ("C-c c f" . codex-cli-send-file)
+         ("C-c c b" . codex-cli-copy-last-block))
   :init
   (setq codex-cli-executable "codex"
         codex-cli-terminal-backend 'vterm
@@ -59,13 +60,14 @@ Note: If this package isn’t on MELPA yet, use Option B.
 ```elisp
 (use-package codex-cli
   :vc (:fetcher github :repo "bennfocus/codex-cli.el")
-  :bind (("C-c x s" . codex-cli-start)
-         ("C-c x t" . codex-cli-toggle)
-         ("C-c x r" . codex-cli-restart)
-         ("C-c x p" . codex-cli-send-prompt)
-         ("C-c x e" . codex-cli-send-region)
-         ("C-c x f" . codex-cli-send-file)
-         ("C-c x b" . codex-cli-copy-last-block))
+  :bind (("C-c c s" . codex-cli-start)
+         ("C-c c c" . codex-cli-toggle)
+         ("C-c c q" . codex-cli-stop)
+         ;; ("C-c c Q" . codex-cli-restart)
+         ("C-c c p" . codex-cli-send-prompt)
+         ("C-c c r" . codex-cli-send-region)
+         ("C-c c f" . codex-cli-send-file)
+         ("C-c c b" . codex-cli-copy-last-block))
   :init
   (setq codex-cli-executable "codex"
         codex-cli-terminal-backend 'vterm
@@ -77,13 +79,14 @@ Note: If this package isn’t on MELPA yet, use Option B.
 ```elisp
 (use-package codex-cli
   :load-path "/path/to/codex-cli.el"   ;; adjust to your checkout
-  :bind (("C-c x s" . codex-cli-start)
-         ("C-c x t" . codex-cli-toggle)
-         ("C-c x r" . codex-cli-restart)
-         ("C-c x p" . codex-cli-send-prompt)
-         ("C-c x e" . codex-cli-send-region)
-         ("C-c x f" . codex-cli-send-file)
-         ("C-c x b" . codex-cli-copy-last-block))
+  :bind (("C-c c s" . codex-cli-start)
+         ("C-c c c" . codex-cli-toggle)
+         ("C-c c q" . codex-cli-stop)
+         ;; ("C-c c Q" . codex-cli-restart)
+         ("C-c c p" . codex-cli-send-prompt)
+         ("C-c c r" . codex-cli-send-region)
+         ("C-c c f" . codex-cli-send-file)
+         ("C-c c b" . codex-cli-copy-last-block))
   :init
   (setq codex-cli-executable "codex"
         codex-cli-terminal-backend 'vterm
