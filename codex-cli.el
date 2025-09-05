@@ -22,6 +22,8 @@
 (declare-function codex-cli--kill-process "codex-cli-term")
 (declare-function codex-cli--start-terminal-process "codex-cli-term")
 (declare-function codex-cli--chunked-send "codex-cli-term")
+(declare-function codex-cli--chunked-send-raw "codex-cli-term")
+(declare-function codex-cli--send-return "codex-cli-term")
 (declare-function codex-cli--store-last-block "codex-cli-utils")
 (declare-function codex-cli--get-last-block "codex-cli-utils")
 (declare-function codex-cli--detect-language "codex-cli-utils")
@@ -78,8 +80,9 @@
 (defcustom codex-cli-focus-on-open t
   "When non-nil, select the Codex side window after displaying it.
 Affects `codex-cli-start' and send commands like
-`codex-cli-send-prompt', `codex-cli-send-region', `codex-cli-send-file',
-and `codex-cli-copy-last-block'."
+`codex-cli-send-region', `codex-cli-send-file', and
+`codex-cli-copy-last-block'. Note: `codex-cli-send-prompt' never
+changes focus and always keeps point in the current window."
   :type 'boolean
   :group 'codex-cli)
 
@@ -266,9 +269,14 @@ Returns the window displaying BUFFER. When
 
     (let ((prompt (read-string "Prompt: " nil nil nil t)))
       (when (and prompt (> (length prompt) 0))
-        ;; Focus after capturing input to avoid minibuffer flicker
-        (codex-cli--show-and-maybe-focus buffer)
-        (codex-cli--log-and-send buffer prompt "prompt")))))
+        ;; Ensure the window exists but do not move focus
+        (unless (get-buffer-window buffer)
+          (codex-cli--setup-side-window buffer))
+        ;; Log + store, then send without trailing newline and press Enter
+        (codex-cli--log-injection (codex-cli--project-name) "prompt" prompt)
+        (codex-cli--store-last-block prompt)
+        (codex-cli--chunked-send-raw buffer prompt codex-cli-max-bytes-per-send)
+        (codex-cli--send-return buffer)))))
 
 ;;;###autoload
 (defun codex-cli-copy-last-block ()

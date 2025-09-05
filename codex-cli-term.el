@@ -131,5 +131,40 @@ Appends final newline once after all chunks are sent."
     (when (> total-chunks 1)
       (message "Sending complete."))))
 
+(defun codex-cli--chunked-send-raw (buffer text max-bytes-per-send)
+  "Send TEXT to BUFFER in chunks without appending a newline.
+Uses the same chunking behavior as `codex-cli--chunked-send' but does
+not send a trailing newline."
+  (let* ((text-length (length text))
+         (start 0)
+         (chunk-num 1)
+         (total-chunks (ceiling (/ (float text-length) max-bytes-per-send))))
+    (while (< start text-length)
+      (let* ((end (min (+ start max-bytes-per-send) text-length))
+             (chunk (substring text start end)))
+        (when (> total-chunks 1)
+          (message "Sending chunk [%d/%d]..." chunk-num total-chunks))
+        (codex-cli--send-string buffer chunk)
+        (when (< end text-length)
+          (sleep-for 0.01))
+        (setq start end
+              chunk-num (1+ chunk-num))))
+    (when (> total-chunks 1)
+      (message "Sending complete."))))
+
+(defun codex-cli--send-return (buffer)
+  "Simulate pressing Enter/Return in the terminal BUFFER."
+  (when (and (buffer-live-p buffer) (codex-cli--alive-p buffer))
+    (with-current-buffer buffer
+      (cond
+       ((derived-mode-p 'vterm-mode)
+        (require 'vterm)
+        (vterm-send-return))
+       ((derived-mode-p 'term-mode)
+        ;; Carriage return is the correct Enter for term
+        (term-send-raw-string "\r"))
+       (t
+        (error "Buffer is not in vterm or term mode: %s" major-mode))))))
+
 (provide 'codex-cli-term)
 ;;; codex-cli-term.el ends here
