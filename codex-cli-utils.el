@@ -94,16 +94,16 @@ If FILEPATH is provided, include a header with the file path."
   (when extension
     (cdr (assoc extension codex-cli--extension-language-map))))
 
-(defun codex-cli--log-buffer-name (project-name)
-  "Return the log buffer name for PROJECT-NAME."
-  (format "*codex-cli-log:%s*" project-name))
+(defun codex-cli--log-buffer-name (proj-name)
+  "Return the log buffer name for PROJ-NAME."
+  (format "*codex-cli-log:%s*" proj-name))
 
-(defun codex-cli--log-injection (project-name operation text)
+(defun codex-cli--log-injection (proj-name operation text)
   "Log injection to the log buffer if enabled.
-PROJECT-NAME is the project name, OPERATION is the type of operation,
+PROJ-NAME is the project name, OPERATION is the type of operation,
 and TEXT is the injected content."
   (when (bound-and-true-p codex-cli-log-injections)
-    (let* ((log-buffer-name (codex-cli--log-buffer-name project-name))
+    (let* ((log-buffer-name (codex-cli--log-buffer-name proj-name))
            (timestamp (format-time-string "%F %T"))
            (log-entry (format "[%s] %s:\n%s\n\n" timestamp operation text)))
       (with-current-buffer (get-buffer-create log-buffer-name)
