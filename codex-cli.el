@@ -190,6 +190,19 @@ Returns the window displaying BUFFER. When
       ;; Show the window
       (codex-cli--show-and-maybe-focus buffer))))
 
+;;;###autoload
+(defun codex-cli-start-or-toggle ()
+  "Start Codex CLI if not running; otherwise toggle the side window.
+If the project buffer/process does not exist, behaves like
+`codex-cli-start'. If it is already running, behaves like
+`codex-cli-toggle'."
+  (interactive)
+  (let* ((buffer-name (codex-cli--buffer-name))
+         (buffer (get-buffer buffer-name)))
+    (if (and buffer (codex-cli--alive-p buffer))
+        (codex-cli-toggle)
+      (codex-cli-start))))
+
 (defvar codex-cli--preamble-timer nil
   "Timer for preamble injection after process start.")
 

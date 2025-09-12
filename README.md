@@ -39,10 +39,8 @@ Ensure MELPA is configured, then:
 ```elisp
 (use-package codex-cli
   :ensure t
-  :bind (("C-c c s" . codex-cli-start)
-         ("C-c c c" . codex-cli-toggle)
+  :bind (("C-c c c" . codex-cli-start-or-toggle)
          ("C-c c q" . codex-cli-stop)
-         ;; ("C-c c Q" . codex-cli-restart)
          ("C-c c p" . codex-cli-send-prompt)
          ("C-c c r" . codex-cli-send-region)
          ("C-c c f" . codex-cli-send-file)
@@ -60,10 +58,8 @@ Note: If this package isn’t on MELPA yet, use Option B.
 ```elisp
 (use-package codex-cli
   :vc (:fetcher github :repo "bennfocus/codex-cli.el")
-  :bind (("C-c c s" . codex-cli-start)
-         ("C-c c c" . codex-cli-toggle)
+  :bind (("C-c c c" . codex-cli-start-or-toggle)
          ("C-c c q" . codex-cli-stop)
-         ;; ("C-c c Q" . codex-cli-restart)
          ("C-c c p" . codex-cli-send-prompt)
          ("C-c c r" . codex-cli-send-region)
          ("C-c c f" . codex-cli-send-file)
@@ -79,10 +75,8 @@ Note: If this package isn’t on MELPA yet, use Option B.
 ```elisp
 (use-package codex-cli
   :load-path "/path/to/codex-cli.el"   ;; adjust to your checkout
-  :bind (("C-c c s" . codex-cli-start)
-         ("C-c c c" . codex-cli-toggle)
+  :bind (("C-c c c" . codex-cli-start-or-toggle)
          ("C-c c q" . codex-cli-stop)
-         ;; ("C-c c Q" . codex-cli-restart)
          ("C-c c p" . codex-cli-send-prompt)
          ("C-c c r" . codex-cli-send-region)
          ("C-c c f" . codex-cli-send-file)
@@ -113,6 +107,7 @@ Note: If this package isn’t on MELPA yet, use Option B.
 ## Commands
 
 - `codex-cli-start` start or focus the session for the current project
+- `codex-cli-start-or-toggle` start if absent, otherwise toggle the window
 - `codex-cli-toggle` show or hide the side window without killing the process
 - `codex-cli-restart` kill and start again in the same buffer
 - `codex-cli-stop` terminate the process and bury the buffer
