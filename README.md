@@ -96,7 +96,7 @@ Note: If this package isn’t on MELPA yet, use Option B.
    which codex && codex --version
    ```
 2. Open a file inside your project in Emacs.
-3. `M-x codex-cli-start` (or `C-c x s`) to open a `*codex-cli:PROJECT*` buffer on the right.
+3. `M-x codex-cli-start` (or `C-c c c`) to open a `*codex-cli:PROJECT:ID*` buffer on the right (ID auto‑generated unless you name it).
 4. Try:
    - `M-x codex-cli-send-prompt` to paste a message into the terminal
    - Select a region then `M-x codex-cli-send-region`
@@ -106,15 +106,26 @@ Note: If this package isn’t on MELPA yet, use Option B.
 
 ## Commands
 
-- `codex-cli-start` start or focus the session for the current project
+- `codex-cli-start` start a new session (auto id if unnamed)
 - `codex-cli-start-or-toggle` start if absent, otherwise toggle the window
-- `codex-cli-toggle` show or hide the side window without killing the process
+- `codex-cli-toggle` choose an existing session and show/hide the window
 - `codex-cli-restart` kill and start again in the same buffer
-- `codex-cli-stop` terminate the process and bury the buffer
+- `codex-cli-stop` choose an existing session and terminate it
 - `codex-cli-send-prompt` minibuffer input pasted into the terminal
 - `codex-cli-send-region` send active region or whole buffer as a fenced block
 - `codex-cli-send-file` pick a project file and send as a fenced block
 - `codex-cli-copy-last-block` re‑send the last injected block
+
+Multiple sessions per project:
+- `codex-cli-start-session` start a new named session
+- `codex-cli-toggle-session` toggle a named session window
+- `codex-cli-stop-session` stop a named session
+- `codex-cli-list-sessions` show existing sessions
+- `codex-cli-stop-all` stop all sessions for the current project
+
+Tips:
+- Use a prefix arg (C-u) with `codex-cli-start` to provide a session name (leave blank to auto‑generate).
+- `codex-cli-toggle`/`codex-cli-stop` prompt for an existing session; if only one exists, it is chosen automatically.
 
 ---
 

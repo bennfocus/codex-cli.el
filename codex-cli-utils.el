@@ -11,8 +11,10 @@
 
 ;;; Code:
 
-(defvar codex-cli--last-block ""
-  "The last block that was sent to the CLI.")
+;; Per-session: make last block buffer-local so each Codex buffer
+;; maintains its own resend history.
+(defvar-local codex-cli--last-block ""
+  "The last block that was sent to the CLI (buffer-local).")
 
 (defun codex-cli--store-last-block (text)
   "Store TEXT as the last block sent."
@@ -94,16 +96,18 @@ If FILEPATH is provided, include a header with the file path."
   (when extension
     (cdr (assoc extension codex-cli--extension-language-map))))
 
-(defun codex-cli--log-buffer-name (proj-name)
-  "Return the log buffer name for PROJ-NAME."
-  (format "*codex-cli-log:%s*" proj-name))
+(defun codex-cli--log-buffer-name (proj-name &optional session)
+  "Return the log buffer name for PROJ-NAME and optional SESSION."
+  (if (and session (> (length session) 0))
+      (format "*codex-cli-log:%s:%s*" proj-name session)
+    (format "*codex-cli-log:%s*" proj-name)))
 
-(defun codex-cli--log-injection (proj-name operation text)
+(defun codex-cli--log-injection (proj-name operation text &optional session)
   "Log injection to the log buffer if enabled.
 PROJ-NAME is the project name, OPERATION is the type of operation,
-and TEXT is the injected content."
+TEXT is the injected content, and SESSION is an optional session name."
   (when (bound-and-true-p codex-cli-log-injections)
-    (let* ((log-buffer-name (codex-cli--log-buffer-name proj-name))
+    (let* ((log-buffer-name (codex-cli--log-buffer-name proj-name session))
            (timestamp (format-time-string "%F %T"))
            (log-entry (format "[%s] %s:\n%s\n\n" timestamp operation text)))
       (with-current-buffer (get-buffer-create log-buffer-name)

@@ -27,7 +27,5 @@ server/
 .eldev/
 
 # Others
-/spec.md
-/tasks.md
-/tests/QA.md
+/docs/
 /AGENTS.md
