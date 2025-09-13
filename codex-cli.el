@@ -34,6 +34,9 @@
 (declare-function codex-cli--detect-language-from-extension "codex-cli-utils")
 (declare-function codex-cli--log-injection "codex-cli-utils")
 
+;; Forward var declaration to silence byte-compiler when referenced earlier
+(defvar codex-cli--preamble-timer)
+
 (defgroup codex-cli nil
   "Run Codex CLI inside Emacs with minimal helpers."
   :group 'tools
@@ -62,6 +65,14 @@
 (defcustom codex-cli-terminal-backend 'vterm
   "Preferred terminal backend: vterm or term."
   :type '(choice (const vterm) (const term))
+  :group 'codex-cli)
+
+(defcustom codex-cli-toggle-all-min-width 50
+  "Minimum column width per session when showing all sessions.
+Used by `codex-cli-toggle-all' to decide how many session columns
+to display at once. When the current frame cannot accommodate all
+sessions at this width, sessions are split across pages."
+  :type 'integer
   :group 'codex-cli)
 
 (defcustom codex-cli-max-bytes-per-send 8000
@@ -141,6 +152,14 @@ removed, and any `:` characters are replaced with the Unicode ratio
 colon `∶` to avoid conflicts with our buffer name separators."
   (let* ((root (codex-cli-project-root))
          (abbr (abbreviate-file-name root))
+         (no-trailing (directory-file-name abbr)))
+    (replace-regexp-in-string ":" "∶" no-trailing)))
+
+(defun codex-cli--project-name-from-root (root)
+  "Return project display name string derived from ROOT path.
+Performs the same transformation as `codex-cli--project-name', but for
+an explicit ROOT instead of the current project."
+  (let* ((abbr (abbreviate-file-name root))
          (no-trailing (directory-file-name abbr)))
     (replace-regexp-in-string ":" "∶" no-trailing)))
 
@@ -255,6 +274,16 @@ Return the chosen buffer or nil when none exist."
                     (and n (string-prefix-p prefix n) (not (string-prefix-p "*codex-cli-log:" n)))))
                 (buffer-list))))
 
+(defun codex-cli--project-session-buffers-for-root (root)
+  "Return a list of Codex session buffers for the project ROOT path."
+  (let* ((proj (codex-cli--project-name-from-root root))
+         (prefix (format "*codex-cli:%s" proj)))
+    (seq-filter (lambda (b)
+                  (let ((n (buffer-name b)))
+                    (and n (string-prefix-p prefix n)
+                         (not (string-prefix-p "*codex-cli-log:" n)))))
+                (buffer-list))))
+
 (defun codex-cli--choose-project-session-buffer (&optional prompt)
   "Prompt to choose a Codex session buffer within the current project.
 Returns the chosen buffer or nil when none exist. Shows the project path
@@ -361,6 +390,160 @@ Otherwise prompt with PROMPT using completion."
       (let* ((display-sessions (mapcar (lambda (s) (if (string-empty-p s) "default" s)) sessions))
              (choice (completing-read (or prompt "Choose session: ") display-sessions nil t)))
         (if (string= choice "default") "" choice))))))
+
+;; State for `codex-cli-toggle-all'
+(defvar codex-cli--toggle-all-config-by-frame (make-hash-table :test 'eq)
+  "Saved window configurations by frame for `codex-cli-toggle-all'.")
+
+(defvar codex-cli--toggle-all-state-by-frame (make-hash-table :test 'eq)
+  "State by frame for `codex-cli-toggle-all'. Each value is a plist with
+keys :project-root, :page (zero-based integer).")
+
+(defun codex-cli--toggle-all-active-p ()
+  "Return non-nil if `codex-cli-toggle-all' layout is active in this frame."
+  (gethash (selected-frame) codex-cli--toggle-all-config-by-frame))
+
+(defun codex-cli--toggle-all--windows-left-to-right ()
+  "Return windows in the selected frame sorted left-to-right."
+  (let ((wins (window-list (selected-frame) 'no-mini)))
+    (sort wins (lambda (a b)
+                 (< (car (window-edges a))
+                    (car (window-edges b)))))))
+
+(defun codex-cli--toggle-all--per-page (total)
+  "Compute how many sessions to show per page given TOTAL sessions."
+  (let* ((root (frame-root-window))
+         (width (max 1 (window-total-width root)))
+         (minw (max 1 codex-cli-toggle-all-min-width))
+         (max-columns (max 1 (/ width minw))))
+    (min total max-columns)))
+
+(defun codex-cli--toggle-all--show-page (page buffers)
+  "Show PAGE (0-based) of BUFFERS as vertical columns across the frame."
+  (let* ((total (length buffers))
+         (per (codex-cli--toggle-all--per-page total))
+         (pages (max 1 (ceiling (/ (float total) (float per)))))
+         (page (max 0 (min page (1- pages))))
+         (start (* page per))
+         (end (min total (+ start per)))
+         (slice (cl-subseq buffers start end)))
+    ;; Ensure we operate from a non-side window to avoid errors like:
+    ;; "Cannot make side window the only window" when calling delete-other-windows.
+    (when (window-live-p (frame-root-window))
+      (select-window (frame-root-window)))
+    (delete-other-windows)
+    ;; Create N-1 vertical splits, then balance
+    (when (> (length slice) 1)
+      (dotimes (_ (1- (length slice)))
+        (split-window-right))
+      (balance-windows))
+    ;; Map buffers to windows left->right
+    (let ((wins (codex-cli--toggle-all--windows-left-to-right)))
+      (cl-mapc #'set-window-buffer wins slice))
+    ;; Return normalized page and page count
+    (list page pages per)))
+
+;;;###autoload
+(defun codex-cli-toggle-all ()
+  "Toggle showing all project sessions as columns in the current frame.
+
+First call saves the current window configuration and arranges all
+sessions from this project into evenly sized vertical columns. Each
+column has at least `codex-cli-toggle-all-min-width' columns. When the
+frame is too narrow to show all sessions at this minimum width, the
+sessions are split across pages. Use `codex-cli-toggle-all-next-page'
+and `codex-cli-toggle-all-prev-page' to navigate between pages.
+
+Calling the command again in the same frame restores the previous
+window configuration."
+  (interactive)
+  (let ((frame (selected-frame)))
+    (if (codex-cli--toggle-all-active-p)
+        ;; Restore previous layout
+        (let ((conf (gethash frame codex-cli--toggle-all-config-by-frame)))
+          (when conf (set-window-configuration conf))
+          (remhash frame codex-cli--toggle-all-config-by-frame)
+          (remhash frame codex-cli--toggle-all-state-by-frame)
+          (message "codex-cli: restored previous window layout"))
+      ;; Activate multi-session layout
+      (let* ((orig-conf (current-window-configuration))
+             (buffers (codex-cli--project-session-buffers)))
+        ;; If no sessions for this project, offer to create one.
+        (when (null buffers)
+          (when (y-or-n-p "No session in this project. Start a new one? ")
+            ;; Start a new session WITHOUT displaying a side window
+            (let* ((project-root (codex-cli-project-root))
+                   (name (codex-cli--generate-session-id))
+                   (buffer (codex-cli--get-or-create-buffer name)))
+              (codex-cli--start-terminal-process
+               buffer project-root codex-cli-executable codex-cli-extra-args codex-cli-terminal-backend)
+              (when codex-cli-session-preamble
+                (with-current-buffer buffer
+                  (when codex-cli--preamble-timer
+                    (cancel-timer codex-cli--preamble-timer))
+                  (setq codex-cli--preamble-timer
+                        (run-with-timer 1.0 nil #'codex-cli--inject-preamble buffer))))
+              (codex-cli--record-last-session (codex-cli--session-name-for-buffer buffer))
+              (setq buffers (list buffer)))))
+        (if (null buffers)
+            (message "codex-cli: no sessions to display")
+          (progn
+            ;; Save original window configuration (pre-creation, pre-layout)
+            (puthash frame orig-conf codex-cli--toggle-all-config-by-frame)
+            ;; Always use the column layout + paging (works for 1+ sessions)
+            (cl-destructuring-bind (page pages per)
+                (codex-cli--toggle-all--show-page 0 buffers)
+              (puthash frame (list :project-root (codex-cli-project-root)
+                                   :page page
+                                   :pages pages
+                                   :per-page per)
+                       codex-cli--toggle-all-state-by-frame)
+              (message "codex-cli: showing %d/%d sessions (page %d/%d)"
+                       (min per (length buffers)) (length buffers) (1+ page) pages))))))))
+
+;;;###autoload
+(defun codex-cli-toggle-all-next-page ()
+  "Show the next page of sessions for `codex-cli-toggle-all' in this frame."
+  (interactive)
+  (let* ((frame (selected-frame))
+         (state (gethash frame codex-cli--toggle-all-state-by-frame)))
+    (unless state
+      (user-error "codex-cli-toggle-all is not active in this frame"))
+    (let* ((buffers (codex-cli--project-session-buffers-for-root (plist-get state :project-root)))
+           (per (codex-cli--toggle-all--per-page (length buffers)))
+           (pages (max 1 (ceiling (/ (float (length buffers)) (float per)))))
+           (curr (plist-get state :page))
+           (page (if (>= curr (1- pages)) 0 (1+ curr))))
+      (cl-destructuring-bind (page* pages* per*)
+          (codex-cli--toggle-all--show-page page buffers)
+        (puthash frame (list :project-root (codex-cli-project-root)
+                             :page page*
+                             :pages pages*
+                             :per-page per*)
+                 codex-cli--toggle-all-state-by-frame)
+        (message "codex-cli: page %d/%d" (1+ page*) pages*)))))
+
+;;;###autoload
+(defun codex-cli-toggle-all-prev-page ()
+  "Show the previous page of sessions for `codex-cli-toggle-all' in this frame."
+  (interactive)
+  (let* ((frame (selected-frame))
+         (state (gethash frame codex-cli--toggle-all-state-by-frame)))
+    (unless state
+      (user-error "codex-cli-toggle-all is not active in this frame"))
+    (let* ((buffers (codex-cli--project-session-buffers-for-root (plist-get state :project-root)))
+           (per (codex-cli--toggle-all--per-page (length buffers)))
+           (pages (max 1 (ceiling (/ (float (length buffers)) (float per)))))
+           (curr (plist-get state :page))
+           (page (if (<= curr 0) (1- pages) (1- curr))))
+      (cl-destructuring-bind (page* pages* per*)
+          (codex-cli--toggle-all--show-page page buffers)
+        (puthash frame (list :project-root (codex-cli-project-root)
+                             :page page*
+                             :pages pages*
+                             :per-page per*)
+                 codex-cli--toggle-all-state-by-frame)
+        (message "codex-cli: page %d/%d" (1+ page*) pages*)))))
 
 ;;;###autoload
 (defun codex-cli-toggle (&optional session)
