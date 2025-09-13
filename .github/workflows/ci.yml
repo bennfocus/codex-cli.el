@@ -3,16 +3,28 @@ on: [push, pull_request]
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        emacs_version: [ '28.2', '29.1' ]
     steps:
       - uses: actions/checkout@v4
-      - name: Install Emacs
-        run: sudo apt-get update && sudo apt-get install -y emacs-nox
+
+      - name: Setup Emacs ${{ matrix.emacs_version }}
+        uses: jcs090218/setup-emacs@v2
+        with:
+          version: ${{ matrix.emacs_version }}
+
+      - name: Setup Eask
+        uses: jcs090218/setup-eask@v1
+
+      - name: Install dependencies
+        run: eask install
+
       - name: Byte-compile
-        run: emacs -Q --batch -L . -f batch-byte-compile *.el
-      - name: Run ERT
-        run: |
-          emacs -Q --batch \
-            -L . \
-            -l codex-cli.el \
-            -l tests/codex-cli-test.el \
-            -f ert-run-tests-batch-and-exit
+        run: eask compile
+
+      - name: Run ERT tests
+        run: eask test ert tests/*.el
+
+      - name: Lint (checkdoc + package-lint)
+        run: eask lint checkdoc && eask lint package-lint

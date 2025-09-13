@@ -191,6 +191,12 @@ emacs -Q --batch -L /path/to/codex-cli.el \
   -f batch-byte-compile /path/to/codex-cli.el/*.el
 ```
 
+Using Eask for local development (optional):
+
+- Install dependencies: `eask install`
+- Compile the package: `eask compile`
+- Run tests: `eask test ert tests/*.el`
+
 ---
 
 ## Tests

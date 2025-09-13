@@ -3,6 +3,9 @@
 
 # Distribution / packaging
 .elpa/
+.eask/
+Eask.lock
+dist/
 
 # Emacs backup files
 *~
