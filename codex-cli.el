@@ -19,6 +19,7 @@
 (require 'codex-cli-utils)
 (require 'seq)
 (require 'subr-x)
+(require 'cl-lib)
 
 (declare-function codex-cli--alive-p "codex-cli-term")
 (declare-function codex-cli--kill-process "codex-cli-term")
@@ -170,31 +171,39 @@ When SESSION is nil or empty, returns the default session name."
   "Parse BUFFER-OR-NAME and return (PROJECT SESSION) if it is a Codex buffer.
 SESSION may be nil when default. Returns nil if not a Codex buffer."
   (let* ((name (if (bufferp buffer-or-name) (buffer-name buffer-or-name) buffer-or-name)))
-    (when (string-match "^\\*codex-cli:\\([^:*]+\\)\(?::\\([^*]+\\)\)?\\*$" name)
+    (cond
+     ;; Named session: *codex-cli:PROJECT:SESSION*
+     ((string-match "^\\*codex-cli:\\([^:*]+\\):\\([^*]+\\)\\*$" name)
       (list (match-string 1 name)
-            (let ((sess (match-string 2 name)))
-              (and sess (string-trim sess)))))))
+            (string-trim (match-string 2 name))))
+     ;; Default session: *codex-cli:PROJECT*
+     ((string-match "^\\*codex-cli:\\([^:*]+\\)\\*$" name)
+      (list (match-string 1 name) nil))
+     (t nil))))
 
 (defun codex-cli--sessions-for-project ()
   "Return a list of session name strings for the current project.
-The default session is represented as an empty string \"\"."
-  (condition-case _err
+The default session is represented as an empty string \"\".
+Implementation parses Codex buffer names and filters by current project name."
+  (condition-case err
       (let* ((proj (codex-cli--project-name))
-             (prefix (format "*codex-cli:%s" proj))
              (sessions '())
              (seen-default nil))
-        (dolist (buf (buffer-list))
-          (let* ((name (buffer-name buf)))
-            (when (string-prefix-p prefix name)
-              (let ((parts (codex-cli--parse-buffer-name name)))
-                (when parts
-                  (let ((sess (cadr parts)))
-                    (if sess
-                        (push sess sessions)
-                      (setq seen-default t))))))))
+        (dolist (buf (codex-cli--all-session-buffers))
+          (let ((parts (codex-cli--parse-buffer-name buf)))
+            (when parts
+              (let ((proj-name (car parts))
+                    (sess (cadr parts)))
+                (when (string= proj proj-name)
+                  (if (and sess (> (length sess) 0))
+                      (push sess sessions)
+                    (setq seen-default t)))))))
         (when seen-default (push "" sessions))
         (delete-dups (nreverse sessions)))
-    (error nil)))
+    (error
+     (message "codex-cli--sessions-for-project error: %s (buffer=%s dir=%s)"
+              (error-message-string err) (buffer-name) default-directory)
+     nil)))
 
 ;; Global session helpers (cross-project)
 (defun codex-cli--all-session-buffers ()
@@ -320,37 +329,48 @@ Otherwise prompt with PROMPT using completion."
 
 ;;;###autoload
 (defun codex-cli-toggle (&optional session)
-  "Toggle the side window for SESSION without killing the process.
-When called interactively without SESSION, choose from existing sessions
-with completion; if only one session exists, select it automatically."
+  "Toggle the side window for SESSION within the current project.
+Behavior:
+- If no session exists in this project, offer to create a new one.
+- If one session exists, toggle it.
+- If multiple exist, toggle the last opened; with C-u or if none recorded,
+  prompt to choose. If SESSION is provided, toggle that session explicitly."
   (interactive)
-  (let* ((sess (or session (codex-cli--choose-existing-session "Toggle session: ")))
-         (buffer (and sess (codex-cli--resolve-target-buffer sess t))))
-    (cond
-     (buffer
-      (codex-cli--record-last-session (codex-cli--session-name-for-buffer buffer))
-      (if (codex-cli--side-window-visible-p buffer)
-          (when-let ((window (get-buffer-window buffer))) (delete-window window))
-        (codex-cli--show-and-maybe-focus buffer)))
-     (t
-      ;; Final fallback: allow toggling any Codex session across projects
-      (if-let ((any-buf (codex-cli--choose-any-session-buffer "Toggle session (any project): ")))
-          (if (codex-cli--side-window-visible-p any-buf)
-              (when-let ((window (get-buffer-window any-buf))) (delete-window window))
-            (codex-cli--show-and-maybe-focus any-buf))
-        (message "No Codex sessions found"))))))
+  (let* ((force-choose current-prefix-arg)
+         (sessions (codex-cli--sessions-for-project)))
+    (if (null sessions)
+        ;; No sessions detected for this project. Offer to create.
+        (when (y-or-n-p "No session in this project. Start a new one? ")
+          (codex-cli-start))
+      (let* ((sess
+              (cond
+               ;; Explicit session argument takes precedence
+               ((and session (stringp session)) (string-trim session))
+               ;; One existing session: use it directly
+               ((= (length sessions) 1)
+                (car sessions))
+               ;; Multiple sessions: prefer last unless forced to choose
+               (t
+                (let* ((last (codex-cli--last-session))
+                       (have-last (and last (member last sessions))))
+                  (if (and have-last (not force-choose))
+                      last
+                    (codex-cli--read-session-name "Toggle session: " t))))))
+             (buffer (and sess (get-buffer (codex-cli--buffer-name sess)))))
+        (cond
+         ;; Toggle existing buffer for this project
+         (buffer
+          (codex-cli--record-last-session (codex-cli--session-name-for-buffer buffer))
+          (if (codex-cli--side-window-visible-p buffer)
+              (when-let ((window (get-buffer-window buffer))) (delete-window window))
+            (codex-cli--show-and-maybe-focus buffer)))
+         ;; Provided SESSION but buffer missing
+         (session
+          (message "Session '%s' not found in this project" session))))))
+  )
 
-;;;###autoload
-(defun codex-cli-start-or-toggle (&optional session)
-  "Start Codex CLI for SESSION if not running; otherwise toggle its side window.
-If SESSION is nil, use visible/last-used/default session."
-  (interactive
-   (list (when current-prefix-arg
-           (read-string "Session (empty = default): " nil nil ""))))
-  (let ((buffer (codex-cli--resolve-target-buffer session nil)))
-    (if (and buffer (codex-cli--alive-p buffer))
-        (codex-cli-toggle (codex-cli--session-name-for-buffer buffer))
-      (codex-cli-start session))))
+;; codex-cli-start-or-toggle removed: prefer `codex-cli-toggle` which will
+;; offer to create a new session when none exist for the project.
 
 (defvar-local codex-cli--preamble-timer nil
   "Timer for preamble injection after process start (buffer-local).")
@@ -592,17 +612,9 @@ an empty string selects the default session."
         ""
       input)))
 
-;;;###autoload
-(defun codex-cli-start-session (name)
-  "Start a new Codex session NAME in the current project."
-  (interactive (list (read-string "New session name (blank = auto): " nil nil "")))
-  (codex-cli-start name))
+;; codex-cli-start-session removed: use `codex-cli-start` directly.
 
-;;;###autoload
-(defun codex-cli-toggle-session (name)
-  "Toggle Codex session NAME in the current project."
-  (interactive (list (codex-cli--choose-existing-session "Toggle session: ")))
-  (when name (codex-cli-toggle name)))
+;; codex-cli-toggle-session removed: use `codex-cli-toggle` directly.
 
 ;;;###autoload
 (defun codex-cli-stop-session (name)

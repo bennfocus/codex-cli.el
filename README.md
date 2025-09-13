@@ -39,7 +39,8 @@ Ensure MELPA is configured, then:
 ```elisp
 (use-package codex-cli
   :ensure t
-  :bind (("C-c c c" . codex-cli-start-or-toggle)
+  :bind (("C-c c t" . codex-cli-toggle) ;; toggle exist session, otherwise create new one
+         ("C-c c s" . codex-cli-start)  ;; create a new session
          ("C-c c q" . codex-cli-stop)
          ("C-c c p" . codex-cli-send-prompt)
          ("C-c c r" . codex-cli-send-region)
@@ -58,24 +59,8 @@ Note: If this package isn’t on MELPA yet, use Option B.
 ```elisp
 (use-package codex-cli
   :vc (:fetcher github :repo "bennfocus/codex-cli.el")
-  :bind (("C-c c c" . codex-cli-start-or-toggle)
-         ("C-c c q" . codex-cli-stop)
-         ("C-c c p" . codex-cli-send-prompt)
-         ("C-c c r" . codex-cli-send-region)
-         ("C-c c f" . codex-cli-send-file)
-         ("C-c c b" . codex-cli-copy-last-block))
-  :init
-  (setq codex-cli-executable "codex"
-        codex-cli-terminal-backend 'vterm
-        codex-cli-width 90))
-```
-
-### Option C: Local working tree (no package manager)
-
-```elisp
-(use-package codex-cli
-  :load-path "/path/to/codex-cli.el"   ;; adjust to your checkout
-  :bind (("C-c c c" . codex-cli-start-or-toggle)
+  :bind (("C-c c t" . codex-cli-toggle)
+         ("C-c c s" . codex-cli-start)
          ("C-c c q" . codex-cli-stop)
          ("C-c c p" . codex-cli-send-prompt)
          ("C-c c r" . codex-cli-send-region)
@@ -96,7 +81,7 @@ Note: If this package isn’t on MELPA yet, use Option B.
    which codex && codex --version
    ```
 2. Open a file inside your project in Emacs.
-3. `M-x codex-cli-start` (or `C-c c c`) to open a `*codex-cli:PROJECT:ID*` buffer on the right (ID auto‑generated unless you name it).
+3. `M-x codex-cli-toggle` (or `C-c c c`) to create and open a `*codex-cli:PROJECT:ID*` buffer on the right if none exists; otherwise it toggles the window.
 4. Try:
    - `M-x codex-cli-send-prompt` to paste a message into the terminal
    - Select a region then `M-x codex-cli-send-region`
@@ -107,8 +92,7 @@ Note: If this package isn’t on MELPA yet, use Option B.
 ## Commands
 
 - `codex-cli-start` start a new session (auto id if unnamed)
-- `codex-cli-start-or-toggle` start if absent, otherwise toggle the window
-- `codex-cli-toggle` choose an existing session and show/hide the window
+- `codex-cli-toggle` project-aware: if none exists, ask to create; if one exists, toggle; if multiple exist, toggle last or prompt with `C-u`.
 - `codex-cli-restart` kill and start again in the same buffer
 - `codex-cli-stop` choose an existing session and terminate it
 - `codex-cli-send-prompt` minibuffer input pasted into the terminal
@@ -117,8 +101,7 @@ Note: If this package isn’t on MELPA yet, use Option B.
 - `codex-cli-copy-last-block` re‑send the last injected block
 
 Multiple sessions per project:
-- `codex-cli-start-session` start a new named session
-- `codex-cli-toggle-session` toggle a named session window
+- Use `C-u M-x codex-cli-toggle` to choose a session when multiple exist; otherwise the last opened session is toggled.
 - `codex-cli-stop-session` stop a named session
 - `codex-cli-list-sessions` show existing sessions
 - `codex-cli-stop-all` stop all sessions for the current project
@@ -238,7 +221,8 @@ emacs -Q --batch \
 ## Roadmap
 
 - v0.1 minimal (this release)
-- v0.2 small hydra or transient for core actions and `.dir-locals.el` preamble support
+- v0.2 multi-session for one project
+- v0.3 voice input
 
 For the full design, see `spec.md`.
 

@@ -17,6 +17,7 @@
 (require 'ert)
 (require 'codex-cli-utils)
 (require 'codex-cli)
+(require 'cl-lib)
 
 (ert-deftest codex-cli-test--dummy ()
   "Placeholder test to ensure ERT harness works."
@@ -120,6 +121,41 @@
   "Test log buffer naming for default and named sessions."
   (should (string= "*codex-cli-log:proj*" (codex-cli--log-buffer-name "proj")))
   (should (string= "*codex-cli-log:proj:dev*" (codex-cli--log-buffer-name "proj" "dev"))))
+
+;; Sessions enumeration for current project
+(ert-deftest codex-cli-test--sessions-for-project-detects-named ()
+  "Detect named sessions for the current project."
+  (let ((b1 (get-buffer-create "*codex-cli:proj-a:abc123*")))
+    (unwind-protect
+        (cl-letf (((symbol-function 'codex-cli--project-name) (lambda () "proj-a")))
+          (let ((sessions (codex-cli--sessions-for-project)))
+            (should (listp sessions))
+            (should (member "abc123" sessions))))
+      (when (buffer-live-p b1) (kill-buffer b1)))))
+
+(ert-deftest codex-cli-test--sessions-for-project-ignores-other-projects ()
+  "Do not include sessions from other projects."
+  (let ((b1 (get-buffer-create "*codex-cli:proj-a:abc123*"))
+        (b2 (get-buffer-create "*codex-cli:proj-b:zzz*")))
+    (unwind-protect
+        (cl-letf (((symbol-function 'codex-cli--project-name) (lambda () "proj-a")))
+          (let ((sessions (codex-cli--sessions-for-project)))
+            (should (member "abc123" sessions))
+            (should (not (member "zzz" sessions)))))
+      (when (buffer-live-p b1) (kill-buffer b1))
+      (when (buffer-live-p b2) (kill-buffer b2)))))
+
+(ert-deftest codex-cli-test--sessions-for-project-includes-default ()
+  "Include the default session as empty string when present."
+  (let ((b1 (get-buffer-create "*codex-cli:proj-a*"))
+        (b2 (get-buffer-create "*codex-cli:proj-a:dev*")))
+    (unwind-protect
+        (cl-letf (((symbol-function 'codex-cli--project-name) (lambda () "proj-a")))
+          (let ((sessions (codex-cli--sessions-for-project)))
+            (should (member "" sessions))
+            (should (member "dev" sessions))))
+      (when (buffer-live-p b1) (kill-buffer b1))
+      (when (buffer-live-p b2) (kill-buffer b2)))))
 
 ;; Global session buffer discovery (cross-project) should find Codex buffers
 (ert-deftest codex-cli-test--all-session-buffers ()
