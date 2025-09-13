@@ -2,9 +2,14 @@
 
 Run Codex CLI inside Emacs — project‑scoped terminals, predictable windows, and a few high‑leverage helpers for sending prompts, regions, and files. Small surface. Stable defaults.
 
-![Single Session](./assets/single-session2.png)
+**Single Session in a Side Window**
+![Single session side window](./assets/single-session2.png)
 
-![Multiple Sessions](./assets/multi-sessions.png)
+**Toggle a Project Session**
+![Toggle project session](./assets/toggle-session.png)
+
+**All Project Sessions (Columns + Paging)**
+![All project sessions in columns](./assets/multi-sessions.png)
 
 
 ## Highlights
