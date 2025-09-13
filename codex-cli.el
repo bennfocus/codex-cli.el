@@ -371,9 +371,16 @@ Behavior:
 - If one session exists, toggle it.
 - If multiple exist, always prompt to choose a session. The chooser shows
   the full buffer name including the project path. If SESSION is provided,
-  toggle that session explicitly."
+  toggle that session explicitly.
+
+When called from a Codex session buffer, switching between sessions is
+done in-place within the current window (no side-window recreation), so
+window size is preserved. Toggling the same session from within its
+buffer simply hides the window."
   (interactive)
-  (let* ((buffers (codex-cli--project-session-buffers)))
+  (let* ((buffers (codex-cli--project-session-buffers))
+         (current-codex (codex-cli--parse-buffer-name (current-buffer)))
+         (current-window (and current-codex (get-buffer-window (current-buffer)))))
     (if (null buffers)
         ;; No sessions detected for this project. Offer to create.
         (when (y-or-n-p "No session in this project. Start a new one? ")
@@ -389,13 +396,21 @@ Behavior:
                ;; Multiple: always prompt, showing full buffer name
                (t (codex-cli--choose-project-session-buffer "Toggle session: ")))))
         (cond
-         ((buffer-live-p target)
+         ((not (buffer-live-p target))
+          (when (and session (stringp session))
+            (message "Session '%s' not found in this project" session)))
+         (current-window
+          ;; In a Codex buffer: operate in-place to preserve window size
+          (codex-cli--record-last-session (codex-cli--session-name-for-buffer target))
+          (if (eq (window-buffer current-window) target)
+              (delete-window current-window)
+            (set-window-buffer current-window target)))
+         (t
+          ;; Not in a Codex buffer: normal toggle/show behavior
           (codex-cli--record-last-session (codex-cli--session-name-for-buffer target))
           (if (codex-cli--side-window-visible-p target)
               (when-let ((window (get-buffer-window target))) (delete-window window))
-            (codex-cli--show-and-maybe-focus target)))
-         ((and session (stringp session))
-          (message "Session '%s' not found in this project" session))))))
+            (codex-cli--show-and-maybe-focus target)))))))
   )
 
 ;; codex-cli-start-or-toggle removed: prefer `codex-cli-toggle` which will
