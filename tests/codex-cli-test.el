@@ -172,6 +172,37 @@
       (when (buffer-live-p b2) (kill-buffer b2))
       (when (buffer-live-p log) (kill-buffer log)))))
 
+;; Rename session should update buffer and log names
+(ert-deftest codex-cli-test--rename-session-buffer-and-log ()
+  "Rename a named session; buffer and log buffers should be updated."
+  (let* ((b (get-buffer-create "*codex-cli:proj-a:dev*"))
+         (l (get-buffer-create "*codex-cli-log:proj-a:dev*")))
+    (unwind-protect
+        (cl-letf (((symbol-function 'codex-cli--project-name) (lambda () "proj-a")))
+          (codex-cli-rename-session "dev" "feature")
+          (should (get-buffer "*codex-cli:proj-a:feature*"))
+          (should (get-buffer "*codex-cli-log:proj-a:feature*"))
+          (should (not (get-buffer "*codex-cli:proj-a:dev*")))
+          (should (not (get-buffer "*codex-cli-log:proj-a:dev*"))))
+      (dolist (buf (list b l
+                         (get-buffer "*codex-cli:proj-a:feature*")
+                         (get-buffer "*codex-cli-log:proj-a:feature*")))
+        (when (buffer-live-p buf) (kill-buffer buf))))))
+
+;; Rename should use current codex-cli session buffer when called from it
+(ert-deftest codex-cli-test--rename-current-session-buffer ()
+  "When invoked in a codex-cli buffer, rename that buffer without choosing."
+  (let* ((b (get-buffer-create "*codex-cli:proj-x:dev*")))
+    (unwind-protect
+        (cl-letf (((symbol-function 'codex-cli--project-name) (lambda () "proj-x")))
+          (with-current-buffer b
+            (codex-cli-rename-session nil "work"))
+          (should (get-buffer "*codex-cli:proj-x:work*"))
+          (should (not (get-buffer "*codex-cli:proj-x:dev*"))))
+      (when (buffer-live-p b) (kill-buffer b))
+      (when (get-buffer "*codex-cli:proj-x:work*")
+        (kill-buffer "*codex-cli:proj-x:work*")))))
+
 (provide 'codex-cli-test)
 
 ;;; codex-cli-test.el ends here

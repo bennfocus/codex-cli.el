@@ -81,7 +81,7 @@ Note: If this package isn’t on MELPA yet, use Option B.
    which codex && codex --version
    ```
 2. Open a file inside your project in Emacs.
-3. `M-x codex-cli-toggle` (or `C-c c c`) to create and open a `*codex-cli:PROJECT:ID*` buffer on the right if none exists; otherwise it toggles the window.
+3. `M-x codex-cli-toggle` (or `C-c c c`) to create and open a `*codex-cli:PATH:ID*` buffer on the right if none exists; otherwise it toggles the window. The PATH is the project root path (abbreviated, e.g., `~`), used to avoid collisions for same‑named projects.
 4. Try:
    - `M-x codex-cli-send-prompt` to paste a message into the terminal
    - Select a region then `M-x codex-cli-send-region`
@@ -95,13 +95,14 @@ Note: If this package isn’t on MELPA yet, use Option B.
 - `codex-cli-toggle` project-aware: if none exists, ask to create; if one exists, toggle; if multiple exist, toggle last or prompt with `C-u`.
 - `codex-cli-restart` kill and start again in the same buffer
 - `codex-cli-stop` choose an existing session and terminate it
+- `codex-cli-rename-session` rename a session buffer (and its log) within the current project
 - `codex-cli-send-prompt` minibuffer input pasted into the terminal
 - `codex-cli-send-region` send active region or whole buffer as a fenced block
 - `codex-cli-send-file` pick a project file and send as a fenced block
 - `codex-cli-copy-last-block` re‑send the last injected block
 
 Multiple sessions per project:
-- Use `C-u M-x codex-cli-toggle` to choose a session when multiple exist; otherwise the last opened session is toggled.
+- `codex-cli-toggle` always prompts to choose when multiple sessions exist. It shows the project path and session id, e.g., `~/path/to/project:abc123`.
 - `codex-cli-stop-session` stop a named session
 - `codex-cli-list-sessions` show existing sessions
 - `codex-cli-stop-all` stop all sessions for the current project

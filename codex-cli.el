@@ -136,9 +136,14 @@ Respects `codex-cli-reference-prefix' and formatting defcustoms."
           (format codex-cli-reference-file-format relpath)))
 
 (defun codex-cli--project-name ()
-  "Return a short name for the current project."
-  (let ((root (codex-cli-project-root)))
-    (file-name-nondirectory (directory-file-name root))))
+  "Return a unique identifier for the current project based on its path.
+The path is abbreviated (e.g., `~` for home), has any trailing slash
+removed, and any `:` characters are replaced with the Unicode ratio
+colon `∶` to avoid conflicts with our buffer name separators."
+  (let* ((root (codex-cli-project-root))
+         (abbr (abbreviate-file-name root))
+         (no-trailing (directory-file-name abbr)))
+    (replace-regexp-in-string ":" "∶" no-trailing)))
 
 ;; Session tracking per project root
 (defvar codex-cli--last-session-by-project (make-hash-table :test 'equal)
@@ -241,6 +246,37 @@ Return the chosen buffer or nil when none exist."
                                       (mapcar #'car candidates) nil t)))
         (cdr (assoc choice candidates)))))))
 
+;; Project-scoped session buffer helpers
+(defun codex-cli--project-session-buffers ()
+  "Return a list of Codex session buffers for the current project path."
+  (let* ((proj (codex-cli--project-name))
+         (prefix (format "*codex-cli:%s" proj)))
+    (seq-filter (lambda (b)
+                  (let ((n (buffer-name b)))
+                    (and n (string-prefix-p prefix n) (not (string-prefix-p "*codex-cli-log:" n)))))
+                (buffer-list))))
+
+(defun codex-cli--choose-project-session-buffer (&optional prompt)
+  "Prompt to choose a Codex session buffer within the current project.
+Returns the chosen buffer or nil when none exist. Shows the project path
+and session name during selection, for example ~/proj/path:abc123."
+  (let* ((buffers (codex-cli--project-session-buffers)))
+    (cond
+     ((null buffers) nil)
+     ((= (length buffers) 1) (car buffers))
+     (t
+      (let* ((candidates (mapcar (lambda (b)
+                                   (let* ((parts (codex-cli--parse-buffer-name b))
+                                          (proj (car parts))
+                                          (sess (cadr parts))
+                                          (label (if sess (format "%s:%s" proj sess) proj)))
+                                     (cons label b)))
+                                 buffers))
+             (choice (completing-read (or prompt "Choose session: ")
+                                      (mapcar #'car candidates) nil t)))
+        (cdr (assoc choice candidates))))))
+  )
+
 (defun codex-cli--record-last-session (session)
   "Record SESSION as the last-used session for this project. Empty means default."
   (puthash (codex-cli--project-root-key) (or session "") codex-cli--last-session-by-project))
@@ -333,39 +369,32 @@ Otherwise prompt with PROMPT using completion."
 Behavior:
 - If no session exists in this project, offer to create a new one.
 - If one session exists, toggle it.
-- If multiple exist, toggle the last opened; with C-u or if none recorded,
-  prompt to choose. If SESSION is provided, toggle that session explicitly."
+- If multiple exist, always prompt to choose a session. The chooser shows
+  the full buffer name including the project path. If SESSION is provided,
+  toggle that session explicitly."
   (interactive)
-  (let* ((force-choose current-prefix-arg)
-         (sessions (codex-cli--sessions-for-project)))
-    (if (null sessions)
+  (let* ((buffers (codex-cli--project-session-buffers)))
+    (if (null buffers)
         ;; No sessions detected for this project. Offer to create.
         (when (y-or-n-p "No session in this project. Start a new one? ")
           (codex-cli-start))
-      (let* ((sess
+      (let* ((target
               (cond
                ;; Explicit session argument takes precedence
-               ((and session (stringp session)) (string-trim session))
-               ;; One existing session: use it directly
-               ((= (length sessions) 1)
-                (car sessions))
-               ;; Multiple sessions: prefer last unless forced to choose
-               (t
-                (let* ((last (codex-cli--last-session))
-                       (have-last (and last (member last sessions))))
-                  (if (and have-last (not force-choose))
-                      last
-                    (codex-cli--read-session-name "Toggle session: " t))))))
-             (buffer (and sess (get-buffer (codex-cli--buffer-name sess)))))
+               ((and session (stringp session) (> (length (string-trim session)) 0))
+                (get-buffer (codex-cli--buffer-name (string-trim session))))
+               ;; One existing buffer: use it directly
+               ((= (length buffers) 1)
+                (car buffers))
+               ;; Multiple: always prompt, showing full buffer name
+               (t (codex-cli--choose-project-session-buffer "Toggle session: ")))))
         (cond
-         ;; Toggle existing buffer for this project
-         (buffer
-          (codex-cli--record-last-session (codex-cli--session-name-for-buffer buffer))
-          (if (codex-cli--side-window-visible-p buffer)
-              (when-let ((window (get-buffer-window buffer))) (delete-window window))
-            (codex-cli--show-and-maybe-focus buffer)))
-         ;; Provided SESSION but buffer missing
-         (session
+         ((buffer-live-p target)
+          (codex-cli--record-last-session (codex-cli--session-name-for-buffer target))
+          (if (codex-cli--side-window-visible-p target)
+              (when-let ((window (get-buffer-window target))) (delete-window window))
+            (codex-cli--show-and-maybe-focus target)))
+         ((and session (stringp session))
           (message "Session '%s' not found in this project" session))))))
   )
 
@@ -611,6 +640,66 @@ an empty string selects the default session."
     (if (and allow-empty (string= input "default"))
         ""
       input)))
+
+(defun codex-cli--validate-session-name (name)
+  "Validate session NAME. Must be non-empty and avoid reserved characters.
+Signals a user error if invalid. Returns NAME otherwise."
+  (when (or (not (stringp name)) (string-empty-p name))
+    (user-error "Session name cannot be empty"))
+  (when (string-match-p "[:*]" name)
+    (user-error "Session name cannot contain ':' or '*'"))
+  name)
+
+;;;###autoload
+(defun codex-cli-rename-session (&optional old-session new-session)
+  "Rename a Codex session within the current project.
+
+When called interactively without arguments, prompt to choose an
+existing session (showing project path and session), then prompt for
+the NEW-SESSION name. Enter an empty name to make it the default
+session (no explicit id in the buffer name).
+
+If OLD-SESSION and NEW-SESSION are provided non-interactively, rename
+that session directly. If called while current-buffer is a Codex
+session buffer, that buffer is renamed without prompting to choose.
+Signals an error if the target name collides. The new session name is
+required and cannot be empty."
+  (interactive)
+  (let* ((proj (codex-cli--project-name))
+         (current-name (buffer-name (current-buffer)))
+         (current-session-buffer
+          (and current-name
+               (string-prefix-p "*codex-cli:" current-name)
+               (not (string-prefix-p "*codex-cli-log:" current-name))
+               (current-buffer)))
+         (buffer
+          (or current-session-buffer
+              (and old-session (get-buffer (codex-cli--buffer-name old-session)))
+              (codex-cli--choose-project-session-buffer "Rename session (choose): "))))
+    (unless (buffer-live-p buffer)
+      (user-error "No session selected"))
+    (let* ((parts (codex-cli--parse-buffer-name buffer))
+           (current-session (or (cadr parts) ""))
+           (desired (or new-session
+                        (read-string (format "New session name for %s: " proj)
+                                     nil nil nil))))
+      (codex-cli--validate-session-name desired)
+      (let* ((target-name (codex-cli--buffer-name desired)))
+        (when (get-buffer target-name)
+          (user-error "Target session already exists: %s" target-name))
+        ;; Rename session buffer
+        (with-current-buffer buffer
+          (rename-buffer target-name t))
+        ;; Update last-session mapping when renaming the last one
+        (when (string= (codex-cli--last-session) current-session)
+          (codex-cli--record-last-session desired))
+        ;; Also rename the log buffer when present
+        (let* ((old-log (get-buffer (codex-cli--log-buffer-name proj current-session)))
+               (new-log-name (codex-cli--log-buffer-name proj desired)))
+          (when (buffer-live-p old-log)
+            (with-current-buffer old-log
+              (rename-buffer new-log-name t))))
+        (message "Renamed session '%s' -> '%s'" current-session desired)))))
 
 ;; codex-cli-start-session removed: use `codex-cli-start` directly.
 
