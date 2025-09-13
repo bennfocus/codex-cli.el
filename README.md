@@ -44,8 +44,7 @@ Ensure MELPA is configured, then:
          ("C-c c q" . codex-cli-stop)
          ("C-c c p" . codex-cli-send-prompt)
          ("C-c c r" . codex-cli-send-region)
-         ("C-c c f" . codex-cli-send-file)
-         ("C-c c b" . codex-cli-copy-last-block))
+         ("C-c c f" . codex-cli-send-file))
   :init
   (setq codex-cli-executable "codex"
         codex-cli-terminal-backend 'vterm
@@ -64,8 +63,7 @@ Note: If this package isn’t on MELPA yet, use Option B.
          ("C-c c q" . codex-cli-stop)
          ("C-c c p" . codex-cli-send-prompt)
          ("C-c c r" . codex-cli-send-region)
-         ("C-c c f" . codex-cli-send-file)
-         ("C-c c b" . codex-cli-copy-last-block))
+         ("C-c c f" . codex-cli-send-file))
   :init
   (setq codex-cli-executable "codex"
         codex-cli-terminal-backend 'vterm
@@ -99,12 +97,10 @@ Note: If this package isn’t on MELPA yet, use Option B.
 - `codex-cli-send-prompt` minibuffer input pasted into the terminal
 - `codex-cli-send-region` send active region or whole buffer as a fenced block
 - `codex-cli-send-file` pick a project file and send as a fenced block
-- `codex-cli-copy-last-block` re‑send the last injected block
 
 Multiple sessions per project:
 - `codex-cli-toggle` always prompts to choose when multiple sessions exist. It shows the project path and session id, e.g., `~/path/to/project:abc123`.
-- `codex-cli-stop-session` stop a named session
-- `codex-cli-stop-all` stop all sessions for the current project
+- `codex-cli-stop-all` stop sessions in bulk (prompt for current project or all projects)
 
 Tips:
 - Use a prefix arg (C-u) with `codex-cli-start` to provide a session name (leave blank to auto‑generate).

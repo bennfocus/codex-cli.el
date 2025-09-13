@@ -83,8 +83,7 @@
 (defcustom codex-cli-focus-on-open t
   "When non-nil, select the Codex side window after displaying it.
 Affects `codex-cli-start' and send commands like
-`codex-cli-send-region', `codex-cli-send-file', and
-`codex-cli-copy-last-block'. Note: `codex-cli-send-prompt' never
+`codex-cli-send-region' and `codex-cli-send-file'. Note: `codex-cli-send-prompt' never
 changes focus and always keeps point in the current window."
   :type 'boolean
   :group 'codex-cli)
@@ -566,24 +565,6 @@ sessions exist. If SESSION is provided, sends to that session."
         (codex-cli--chunked-send-raw buffer prompt codex-cli-max-bytes-per-send)
         (codex-cli--send-return buffer)))))
 
-;;;###autoload
-(defun codex-cli-copy-last-block (&optional session)
-  "Re-send the last injected block for SESSION verbatim."
-  (interactive
-   (list (when current-prefix-arg
-           (read-string "Resend from session (empty = default): " nil nil ""))))
-  (let* ((buffer (codex-cli--resolve-target-buffer session nil)))
-    (unless (and buffer (codex-cli--alive-p buffer))
-      (error "Codex CLI process not running. Use `codex-cli-start' first"))
-    (with-current-buffer buffer
-      (let ((last-block (codex-cli--get-last-block)))
-        ;; Ensure the window is visible and focused per user preference
-        (codex-cli--show-and-maybe-focus buffer)
-        (if (and last-block (> (length last-block) 0))
-            (progn
-              (codex-cli--log-and-store buffer last-block "resend")
-              (codex-cli--chunked-send buffer last-block codex-cli-max-bytes-per-send))
-          (message "No previous block to resend"))))))
 
 ;;;###autoload
 (defun codex-cli-send-region (&optional session)
@@ -767,32 +748,41 @@ required and cannot be empty."
 
 ;; codex-cli-toggle-session removed: use `codex-cli-toggle` directly.
 
-;;;###autoload
-(defun codex-cli-stop-session (name)
-  "Stop Codex session NAME in the current project."
-  (interactive (list (codex-cli--choose-existing-session "Stop session: ")))
-  (when name (codex-cli-stop name)))
+;; codex-cli-stop-session removed: use `codex-cli-stop` directly with chooser.
 
 ;; codex-cli-list-sessions removed: rely on chooser prompts in commands.
 
 ;;;###autoload
-(defun codex-cli-stop-all ()
-  "Stop all Codex sessions for the current project."
+(defun codex-cli-stop-all (&optional scope)
+  "Stop Codex sessions in bulk.
+
+Interactively prompts to choose between stopping sessions for the
+current project or for all projects. When SCOPE is provided
+non-interactively, it should be the symbol `project' or `all'."
   (interactive)
-  (let* ((proj (codex-cli--project-name))
-         (prefix (format "*codex-cli:%s" proj))
-         (targets (seq-filter (lambda (b) (string-prefix-p prefix (buffer-name b)))
-                              (buffer-list))))
-    (dolist (buffer targets)
-      ;; Close windows
-      (dolist (win (get-buffer-window-list buffer nil t))
-        (when (window-live-p win) (delete-window win)))
-      ;; Kill process
-      (when (codex-cli--alive-p buffer)
-        (codex-cli--kill-process buffer))
-      ;; Bury
-      (when (buffer-live-p buffer)
-        (bury-buffer buffer)))))
+  (let* ((scope-choice
+          (cond
+           ((memq scope '(project all)) scope)
+           (t (let* ((input (completing-read
+                             "Stop sessions for: "
+                             '("current project" "all projects")
+                             nil t nil nil "current project")))
+                (if (string= input "all projects") 'all 'project)))))
+         (targets (if (eq scope-choice 'all)
+                      (codex-cli--all-session-buffers)
+                    (codex-cli--project-session-buffers))))
+    (if (null targets)
+        (message "No Codex sessions to stop")
+      (dolist (buffer targets)
+        ;; Close windows
+        (dolist (win (get-buffer-window-list buffer nil t))
+          (when (window-live-p win) (delete-window win)))
+        ;; Kill process
+        (when (codex-cli--alive-p buffer)
+          (codex-cli--kill-process buffer))
+        ;; Bury
+        (when (buffer-live-p buffer)
+          (bury-buffer buffer))))))
 
 (provide 'codex-cli)
 ;;; codex-cli.el ends here
