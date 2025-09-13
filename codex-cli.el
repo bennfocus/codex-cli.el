@@ -427,10 +427,19 @@ keys :project-root, :page (zero-based integer).")
          (start (* page per))
          (end (min total (+ start per)))
          (slice (cl-subseq buffers start end)))
-    ;; Ensure we operate from a non-side window to avoid errors like:
-    ;; "Cannot make side window the only window" when calling delete-other-windows.
-    (when (window-live-p (frame-root-window))
-      (select-window (frame-root-window)))
+    ;; Ensure we operate from a non-side window to avoid errors like
+    ;; "Cannot make side window the only window" when calling
+    ;; `delete-other-windows'. Prefer the frame's main window when
+    ;; available, otherwise pick any window without a `window-side'
+    ;; parameter.
+    (let* ((main (and (fboundp 'window-main-window)
+                      (window-main-window (selected-frame))))
+           (non-side (or (and (window-live-p main) main)
+                         (seq-find (lambda (w)
+                                     (not (window-parameter w 'window-side)))
+                                   (window-list (selected-frame) 'no-mini)))))
+      (when (window-live-p non-side)
+        (select-window non-side)))
     (delete-other-windows)
     ;; Create N-1 vertical splits, then balance
     (when (> (length slice) 1)
