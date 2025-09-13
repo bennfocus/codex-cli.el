@@ -497,11 +497,22 @@ This command always creates a new session; it never reuses an existing one."
 (defun codex-cli-stop (&optional session)
   "Kill the process and bury the buffer for SESSION.
 When called interactively without SESSION, choose from existing sessions
-with completion; if only one session exists, select it automatically."
+using the same path:session chooser as `codex-cli-toggle`. If only one
+session exists, select it automatically."
   (interactive)
-  (let* ((sess (or session (codex-cli--choose-existing-session "Stop session: ")))
-         (buffer (and sess (get-buffer (codex-cli--buffer-name sess)))))
-    (when buffer
+  (let* ((buffer
+          (cond
+           ((and session (stringp session) (> (length (string-trim session)) 0))
+            (get-buffer (codex-cli--buffer-name (string-trim session))))
+           (t
+            (let ((bufs (codex-cli--project-session-buffers)))
+              (cond
+               ((null bufs) nil)
+               ((= (length bufs) 1) (car bufs))
+               (t (codex-cli--choose-project-session-buffer "Stop session: "))))))))
+    (if (not (buffer-live-p buffer))
+        (when (and session (stringp session))
+          (message "Session '%s' not found in this project" session))
       (codex-cli--record-last-session (codex-cli--session-name-for-buffer buffer))
       ;; Close any window(s) displaying the buffer first
       (dolist (win (get-buffer-window-list buffer nil t))
