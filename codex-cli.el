@@ -737,17 +737,7 @@ required and cannot be empty."
   (interactive (list (codex-cli--choose-existing-session "Stop session: ")))
   (when name (codex-cli-stop name)))
 
-;;;###autoload
-(defun codex-cli-list-sessions ()
-  "List existing Codex sessions for the current project."
-  (interactive)
-  (let* ((sessions (codex-cli--sessions-for-project))
-         (formatted (mapconcat (lambda (s) (if (string-empty-p s) "default" s))
-                               (sort (copy-sequence sessions) #'string-lessp)
-                               ", ")))
-    (message (if (string-empty-p formatted)
-                 "No sessions yet"
-               (format "Sessions: %s" formatted)))))
+;; codex-cli-list-sessions removed: rely on chooser prompts in commands.
 
 ;;;###autoload
 (defun codex-cli-stop-all ()

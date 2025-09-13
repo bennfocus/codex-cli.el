@@ -104,7 +104,6 @@ Note: If this package isn’t on MELPA yet, use Option B.
 Multiple sessions per project:
 - `codex-cli-toggle` always prompts to choose when multiple sessions exist. It shows the project path and session id, e.g., `~/path/to/project:abc123`.
 - `codex-cli-stop-session` stop a named session
-- `codex-cli-list-sessions` show existing sessions
 - `codex-cli-stop-all` stop all sessions for the current project
 
 Tips:
