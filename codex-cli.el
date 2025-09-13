@@ -483,15 +483,27 @@ This command always creates a new session; it never reuses an existing one."
 ;; Update restart to use the new start logic
 ;;;###autoload
 (defun codex-cli-restart (&optional session)
-  "Kill existing process and start a new one in the same SESSION buffer."
-  (interactive
-   (list (when current-prefix-arg
-           (read-string "Restart session (empty = default): " nil nil ""))))
-  (let ((buffer (codex-cli--get-or-create-buffer session)))
-    (when (codex-cli--alive-p buffer)
-      (codex-cli--kill-process buffer))
-    ;; Start a new process
-    (codex-cli-start session)))
+  "Restart Codex in a chosen session buffer for the current project.
+When multiple sessions exist, prompts using the same path:session labels
+as `codex-cli-toggle`. If SESSION is provided, restarts that session."
+  (interactive)
+  (let* ((buffer
+          (cond
+           ((and session (stringp session) (> (length (string-trim session)) 0))
+            (get-buffer (codex-cli--buffer-name (string-trim session))))
+           (t
+            (let ((bufs (codex-cli--project-session-buffers)))
+              (cond
+               ((null bufs) nil)
+               ((= (length bufs) 1) (car bufs))
+               (t (codex-cli--choose-project-session-buffer "Restart session: "))))))))
+    (unless (buffer-live-p buffer)
+      (user-error "No session to restart. Use `codex-cli-start` first"))
+    (let ((sess (codex-cli--session-name-for-buffer buffer)))
+      (when (codex-cli--alive-p buffer)
+        (codex-cli--kill-process buffer))
+      ;; Start a new process in the same session buffer
+      (codex-cli-start sess))))
 
 ;;;###autoload
 (defun codex-cli-stop (&optional session)
@@ -527,11 +539,20 @@ session exists, select it automatically."
 
 ;;;###autoload
 (defun codex-cli-send-prompt (&optional session)
-  "Read a multi-line prompt and send it to Codex in SESSION."
-  (interactive
-   (list (when current-prefix-arg
-           (read-string "Send prompt to session (empty = default): " nil nil ""))))
-  (let ((buffer (codex-cli--resolve-target-buffer session nil)))
+  "Read a multi-line prompt and send it to Codex in a chosen session.
+Uses the same path:session chooser as `codex-cli-toggle` when multiple
+sessions exist. If SESSION is provided, sends to that session."
+  (interactive)
+  (let* ((buffer
+          (cond
+           ((and session (stringp session) (> (length (string-trim session)) 0))
+            (get-buffer (codex-cli--buffer-name (string-trim session))))
+           (t
+            (let ((bufs (codex-cli--project-session-buffers)))
+              (cond
+               ((null bufs) nil)
+               ((= (length bufs) 1) (car bufs))
+               (t (codex-cli--choose-project-session-buffer "Send prompt to: "))))))))
     (unless (and buffer (codex-cli--alive-p buffer))
       (error "Codex CLI process not running. Use `codex-cli-start' first"))
 
@@ -566,15 +587,23 @@ session exists, select it automatically."
 
 ;;;###autoload
 (defun codex-cli-send-region (&optional session)
-  "Send active region or whole buffer to Codex CLI.
-Behavior depends on `codex-cli-send-style':
+  "Send active region or whole buffer to a chosen Codex session.
+Uses the same path:session chooser as `codex-cli-toggle` when multiple
+sessions exist. Behavior depends on `codex-cli-send-style':
 - `fenced': send content as a fenced code block with language tag.
 - `reference': send a file reference token like `@path#Lstart-end' if the
   buffer is visiting a file; otherwise fallback to `fenced'."
-  (interactive
-   (list (when current-prefix-arg
-           (read-string "Send region to session (empty = default): " nil nil ""))))
-  (let ((buffer (codex-cli--resolve-target-buffer session nil)))
+  (interactive)
+  (let* ((buffer
+          (cond
+           ((and session (stringp session) (> (length (string-trim session)) 0))
+            (get-buffer (codex-cli--buffer-name (string-trim session))))
+           (t
+            (let ((bufs (codex-cli--project-session-buffers)))
+              (cond
+               ((null bufs) nil)
+               ((= (length bufs) 1) (car bufs))
+               (t (codex-cli--choose-project-session-buffer "Send region to: "))))))))
     (unless (and buffer (codex-cli--alive-p buffer))
       (error "Codex CLI process not running. Use `codex-cli-start' first"))
 
@@ -617,10 +646,17 @@ Behavior depends on `codex-cli-send-style':
   "Prompt for file under project and send according to `codex-cli-send-style'.
 When `fenced', send file content as a fenced block with chunking.
 When `reference', send an `@path' token instead of content."
-  (interactive
-   (list (when current-prefix-arg
-           (read-string "Send file to session (empty = default): " nil nil ""))))
-  (let ((buffer (codex-cli--resolve-target-buffer session nil)))
+  (interactive)
+  (let* ((buffer
+          (cond
+           ((and session (stringp session) (> (length (string-trim session)) 0))
+            (get-buffer (codex-cli--buffer-name (string-trim session))))
+           (t
+            (let ((bufs (codex-cli--project-session-buffers)))
+              (cond
+               ((null bufs) nil)
+               ((= (length bufs) 1) (car bufs))
+               (t (codex-cli--choose-project-session-buffer "Send file to: "))))))))
     (unless (and buffer (codex-cli--alive-p buffer))
       (error "Codex CLI process not running. Use `codex-cli-start' first"))
 
