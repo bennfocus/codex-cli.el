@@ -6,7 +6,6 @@ Run Codex CLI inside Emacs — project‑scoped terminals, predictable windows, 
 
 ![Multiple Sessions](./assets/multi-sessions.png)
 
-—
 
 ## Highlights
 
@@ -19,7 +18,6 @@ Run Codex CLI inside Emacs — project‑scoped terminals, predictable windows, 
 
 Non‑goals: MCP tools, Flycheck/Flymake bridges, ediff patch workflows, big menus.
 
-—
 
 ## Requirements
 
@@ -27,7 +25,6 @@ Non‑goals: MCP tools, Flycheck/Flymake bridges, ediff patch workflows, big men
 - Codex CLI on PATH (`codex --version`)
 - Optional: `vterm` (falls back to built‑in `term`)
 
-—
 
 ## Install
 
@@ -56,7 +53,6 @@ MELPA or directly from GitHub via `:vc`:
         codex-cli-width 90))
 ```
 
-—
 
 ## Quick Start
 
@@ -83,7 +79,6 @@ which codex && codex --version
 
 - `M-x codex-cli-toggle-all` (`C-c c a`), then page with `C-c c n` / `C-c c b`
 
-—
 
 ## Commands
 
@@ -107,7 +102,6 @@ Tips:
 - Use `C-u M-x codex-cli-start` to provide a custom session name (blank = auto id).
 - `codex-cli-toggle`/`codex-cli-stop` auto‑select when only one session exists.
 
-—
 
 ## Window & Sessions
 
@@ -122,7 +116,6 @@ Defaults you may want to adjust:
 (setq codex-cli-toggle-all-min-width 60)  ;; min column width per session in show-all
 ```
 
-—
 
 ## Sending Content
 
@@ -149,7 +142,6 @@ Alternatively, enable reference tokens instead of full content:
 
 With `reference` style, `codex-cli-send-region` emits `@path#Lstart-end` when the buffer visits a file; otherwise it falls back to fenced content. `codex-cli-send-file` emits `@path`.
 
-—
 
 ## Configuration Cheatsheet
 
@@ -169,7 +161,6 @@ Sends:
 Show‑All view:
 - `codex-cli-toggle-all-min-width` — minimal column width per session
 
-—
 
 ## Development
 
@@ -190,7 +181,6 @@ emacs -Q --batch -L . -f batch-byte-compile *.el
 emacs -Q --batch -L . -l codex-cli.el -l tests/codex-cli-test.el -f ert-run-tests-batch-and-exit
 ```
 
-—
 
 ## Troubleshooting
 
@@ -200,13 +190,11 @@ emacs -Q --batch -L . -l codex-cli.el -l tests/codex-cli-test.el -f ert-run-test
 - Unicode/paste quirks → use `vterm` backend
 - Wrong project root → open a file inside the repo or set `default-directory`
 
-—
 
 ## License
 
 MIT
 
-—
 
 ## References
 
