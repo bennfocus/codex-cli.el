@@ -21,8 +21,6 @@ Run Codex CLI inside Emacs — project‑scoped terminals, predictable windows, 
 - Smart chunking for large sends + optional per‑session preamble
 - Optional log buffer mirroring injected content
 
-Non‑goals: MCP tools, Flycheck/Flymake bridges, ediff patch workflows, big menus.
-
 
 ## Requirements
 
@@ -199,10 +197,3 @@ emacs -Q --batch -L . -l codex-cli.el -l tests/codex-cli-test.el -f ert-run-test
 ## License
 
 MIT
-
-
-## References
-
-- docs/spec.md — design notes
-- docs/multi-session.md — multi‑session implementation details
-Inspired by the excellent editor‑agent integration patterns in the Emacs community. Built as a clean, minimal alternative tailored for Codex CLI.
