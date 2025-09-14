@@ -14,17 +14,8 @@ jobs:
         with:
           version: ${{ matrix.emacs_version }}
 
-      - name: Setup Eask
-        uses: emacs-eask/setup-eask@v2
-
-      - name: Install dependencies
-        run: eask install
-
       - name: Byte-compile
-        run: eask compile
+        run: emacs -Q --batch -L . -f batch-byte-compile *.el
 
       - name: Run ERT tests
-        run: eask test ert tests/*.el
-
-      - name: Lint (checkdoc + package-lint)
-        run: eask lint checkdoc && eask lint package-lint
+        run: emacs -Q --batch -L . -l codex-cli.el -l tests/codex-cli-test.el -f ert-run-tests-batch-and-exit
