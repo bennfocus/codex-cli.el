@@ -15,7 +15,7 @@ jobs:
           version: ${{ matrix.emacs_version }}
 
       - name: Setup Eask
-        uses: jcs090218/setup-eask@v1
+        uses: emacs-eask/setup-eask@v2
 
       - name: Install dependencies
         run: eask install
